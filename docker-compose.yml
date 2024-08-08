@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  nginx:
+    image: "nginx:1.23"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.ssoinclude.conf:/etc/nginx/nginx.ssoinclude.conf
+      - ./testroot:/app_root
+    network_mode: host
+  web:
+    build:
+      context: .
+    ports:
+      - 2312:80
+  database:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: sso
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
