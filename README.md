@@ -51,4 +51,4 @@ auth_request /auth/api/ping;
 
 then create a service via `/auth/go/admin`, fill in sub_url as your nginx location (WITHOUT origin), and use domain:port as origin (no https://)
 
-Your may also want to create a UserServiceConnection, which is basically a perimssion grant for a user (leave username and passwordPlain empty, those are for more advanced retrofitting)
+Your may also want to create a UserServiceConnection, which is basically a permission grant for a user (leave username and passwordPlain empty, those are for more advanced retrofitting)
