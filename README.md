@@ -49,6 +49,6 @@ And finally this to your locations you want to protect
 auth_request /auth/api/ping;
 ```
 
-then create a service via `/auth/go/admin`, fill in sub_url as your nginx location (WITHOUT origin), and use domain:port as origin (no https://)
+then create a service via `/auth/go/admin`, fill in sub_url as your nginx location (WITHOUT origin), and use domain:port as origin (no https://). Choose an icon from https://github.com/Ertego/sso/blob/publish/src/src/components/Icon.svelte#L2
 
 Your may also want to create a UserServiceConnection, which is basically a permission grant for a user (leave username and passwordPlain empty, those are for more advanced retrofitting)
