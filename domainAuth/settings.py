@@ -28,7 +28,7 @@ DEBUG = True if os.environ.get("dbg") else False
 
 ALLOWED_HOSTS = json.loads(os.environ.get("ALLOWED_HOSTS", "[]"))
 
-CSRF_TRUSTED_ORIGINS = json.loads(os.environ.get("ALLOWED_HOSTS", "[]"))
+CSRF_TRUSTED_ORIGINS = json.loads(os.environ.get("CSRF_TRUSTED_ORIGINS", "[]"))
 
 
 # Application definition
