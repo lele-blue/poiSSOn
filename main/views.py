@@ -1,5 +1,6 @@
 import re
 import base64
+from django.conf import settings
 from django.db.models import F, Q, QuerySet
 from django.db.models.aggregates import Count
 from django_ratelimit.decorators import ratelimit
@@ -82,6 +83,8 @@ def login_check(request):
         # just check if we even try to authenticate
         if is_ratelimited(request, 'login_check', key="ip", increment=False, rate="10/10m"):
             # if we are ratelimited all requests will look like wrong creds, even with the right creds
+            if request.GET.get("fail_mode", "") == "redirect":
+                return HttpResponseRedirect("/auth/go/unauthenticated" + "?url=" + quote(request.META.get("HTTP_X_ORIGINAL_URL", "")))
             return HttpResponse(status=status.HTTP_401_UNAUTHORIZED)
         auth = request.META['HTTP_AUTHORIZATION'].split()
         if len(auth) == 2:
@@ -94,7 +97,12 @@ def login_check(request):
                     is_ratelimited(request, 'login_check', key="ip", increment=True, rate="10/10m")
 
 
-    return HttpResponse(status=status.HTTP_200_OK) if check_user_has_permission(request.META.get("HTTP_X_ORIGINAL_URL"), request.user, request.session) else HttpResponse(status=status.HTTP_401_UNAUTHORIZED)
+    if check_user_has_permission(request.META.get("HTTP_X_ORIGINAL_URL"), request.user, request.session):
+        return HttpResponse(status=status.HTTP_200_OK)
+    else:
+        if request.GET.get("fail_mode", "") == "redirect":
+            return HttpResponseRedirect(settings.SITE_URL + "/auth/go/unauthenticated" + "?url=" + quote(request.META.get("HTTP_X_ORIGINAL_URL", "")))
+        return HttpResponse(status=status.HTTP_401_UNAUTHORIZED)
 
 def resolve_to_service(path: str) -> Optional[Service]:
     url = urlparse(path)

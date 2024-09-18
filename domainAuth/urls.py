@@ -29,7 +29,7 @@ wrap_authorize_post()
 urlpatterns = [
     path('auth/go/admin', admin.site.urls),
     path('auth/go/static/resolve/<path:url>', static_resolver),
-    path('auth/go/unauthenticated', redirect_unauthenticated),
+    path('auth/go/unauthenticated', redirect_unauthenticated, name="redirect_unauth"),
     path('auth/api/logon', ajax_login),
     path('auth/api/service/<str:name>/configuration', GetServiceConfigurationInfo.as_view()),
     path('auth/api/services/query', GetServiceInfo.as_view()),
