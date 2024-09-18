@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'whitenoise',
     'oidc_provider',
+    'rest_framework_api_key',
 
 ]
 
