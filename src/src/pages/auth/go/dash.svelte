@@ -46,14 +46,8 @@
         if (registration.service.origin) do_redirect(url);
         else location.href = url;
     }
-=======
-        const url = (registration.service.sub_url.startsWith("http")?"":(registration.service.origin??location.origin)) + registration.service.sub_url;
-        if (registration.service.origin) do_redirect(url);
-        else location.href = url;
-    }
 
     let opened_services = {};
->>>>>>> master
 </script>
 
 <style>
