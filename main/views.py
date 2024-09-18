@@ -28,18 +28,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_api_key.permissions import BaseHasAPIKey
 
-from main.models import UserServiceConnection, Service, Code, OriginMigrationToken
-from main.serializers import UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer
-=======
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_api_key.permissions import BaseHasAPIKey
-
 from main.models import ApplicationPassword, ConfigurationApiKey, ServiceConfiguration, ServiceConfigurationStep, UserServiceConnection, Service, Code, OriginMigrationToken
 from main.serializers import ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer
->>>>>>> master
 
 
 @ensure_csrf_cookie
