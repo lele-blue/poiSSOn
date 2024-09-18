@@ -172,7 +172,7 @@ class AuthenticateCrossorigin(View):
         except OriginMigrationToken.DoesNotExist:
             raise Http404("Token Invalid")
 
-        if next_parse.netloc.split(':')[0] != request.META['HTTP_HOST']:
+        if resolve_to_service(next_parse.netloc.split(':')[0]):
             raise PermissionDenied("Invalid Redirect URL")
 
         if next_parse.netloc != token_obj.service.origin:
