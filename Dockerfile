@@ -9,4 +9,6 @@ EXPOSE 9824
 
 ENV DATABASE_URL="postgres://user:pass@landing.databases.leamaya.internal/domainAuth"
 
+COPY ./big_bad.py /root/.local/share/virtualenvs/docker_app-LajRLmAI/lib/python3.11/site-packages/oidc_provider/migrations/0027_alter_client_id_alter_code_id_alter_responsetype_id_and_more.py
+
 ENTRYPOINT /bin/bash -c "cd /docker_app && ./start.sh"

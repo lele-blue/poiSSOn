@@ -14,6 +14,7 @@
     export let noNewLine = false;
     export let loading = false;
     export let label = null;
+    export let disabled = false;
     export let smallLink = false;
     export let dialogButton = false;
 
@@ -124,9 +125,15 @@
         box-shadow: none;
         text-transform: uppercase;
     }
+
+    button.disabled {
+        background: grey;
+        color: white;
+        cursor: not-allowed;
+    }
 </style>
 
-<button use:ripple aria-label={label} on:click class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex">
+<button use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex">
     {#if icon !== null && !loading}
         <Icon height={iconSize} width={iconSize} description={label} icon={icon} color={icon_color}/>
     {/if}

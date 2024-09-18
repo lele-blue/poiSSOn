@@ -4,6 +4,7 @@
     import {createEventDispatcher} from "svelte";
     export let placeholder;
     export let value = "";
+		export let autocomplete;
     export let icon = null;
     export let error = null;
     export let trailingIcon = null;
@@ -153,9 +154,9 @@
         {/if}
         <span bind:this={labelElem} class:wiggle={wiggleElem && content} class="label" class:content class:focused class:error>{placeholder}</span>
         {#if password}
-            <input on:keydown={keydown} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input on:keydown={keydown} {autocomplete} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
         {:else}
-            <input on:keydown={keydown} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input on:keydown={keydown} {autocomplete} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
         {/if}
         {#if endIcon}
             <div aria-hidden="true" class="icon-container icon-container-end" title={error}>

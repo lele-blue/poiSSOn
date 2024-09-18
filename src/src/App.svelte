@@ -16,17 +16,18 @@
     }
 
     :root {
-        --material-accent-color: #AD88AB;
+        --material-accent-color: /*#9600f1*/ #b045f2 /*#AD88AB*/;
         --icon-secondary-col: darkslategrey;
         --material-background-important: rgba(255, 255, 255, 0.5);
         --material-error-color: red;
         color: darkslategrey;
         --icon-col: darkslategrey;
         --material-ambient-color: darkslategrey;
-        --material-accent-color-light-transparent: rgba(173, 136, 171, 0.5);
+        --material-accent-color-light-transparent: #f6befe /*rgba(173, 136, 171, 0.5)*/;
         --material-accent-color-text: white;
-        --material-accent-color-light: #ad9bac;
+        --material-accent-color-light: /*#ad9bac*/#ad00f4;
         --material-text: darkslategrey;
+				--material-background-color: #fff;
     }
 
     .ripple {

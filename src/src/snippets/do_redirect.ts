@@ -1,7 +1,7 @@
 import {csrftoken} from "./csrf";
 // assumes redirect was already checked!!!
 export async function do_redirect(url) {
-    const url_obj = new URL(url);
+    const url_obj = new URL(url, url.startsWith('/') ? location.origin : undefined);
     if (url_obj.origin !== location.origin) {
         let body = new FormData();
         body.append('for', url);

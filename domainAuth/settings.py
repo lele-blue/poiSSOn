@@ -40,11 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'main',
+
     'rest_framework',
     'whitenoise',
     'oidc_provider',
 
-    'main'
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'domainAuth.urls'
+
+OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
+OIDC_EXTRA_SCOPE_CLAIMS = 'main.oidc_provider_settings.CustomScopeClaims'
+OIDC_AFTER_USERLOGIN_HOOK = 'main.oidc_provider_settings.check_permissions'
 
 TEMPLATES = [
     {

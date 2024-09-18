@@ -13,6 +13,7 @@ psycopg2-binary = "*"
 django-oidc-provider = "*"
 django-stubs = "*"
 django-ratelimit = "*"
+djangorestframework-api-key = "==2.*"
 
 [dev-packages]
 

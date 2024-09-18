@@ -1,0 +1,29 @@
+{% extends "main.html" %}
+
+
+{% block content %}
+<div style="display: none" id="content">
+
+<h1 style="text-align: center">Request for Permission</h1>
+
+<p style="margin-bottom: 5px">Client <strong>{{ client.name }}</strong> would like to access this information of you ...</p>
+
+<form method="post" action="{% url 'oidc_provider:authorize' %}">
+
+    {% csrf_token %}
+
+    {{ hidden_inputs }}
+{% comment %}
+    <ul>
+    {% for scope in scopes %}
+        <li><strong>{{ scope.name }}</strong><br><i>{{ scope.description }}</i></li>
+    {% endfor %}
+    </ul>
+{% endcomment %}
+    <input id="deny" style="display:none" type="submit" value="Decline" />
+    <input id="accept" style="display:none" name="allow" type="submit" value="Authorize" />
+
+</form>
+</div>
+{{ scopes|json_script:"scopes" }}
+{% endblock %}
