@@ -10,6 +10,8 @@ services:
   web:
     build:
       context: .
+    volumes:
+      ./.env:/docker_app/.env
     ports:
       - 2312:80
   database:
