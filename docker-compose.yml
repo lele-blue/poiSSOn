@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   nginx:
     image: "nginx:1.23"
@@ -10,8 +9,7 @@ services:
   web:
     build:
       context: .
-    volumes:
-      - ./.env:/docker_app/.env
+    env_file: .env
     ports:
       - 2312:80
   database:
