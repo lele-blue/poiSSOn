@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('main', '0010_alter_service_origin'),
-        ('oidc_provider', '0027_alter_client_id_alter_code_id_alter_responsetype_id_and_more'),
+        ('oidc_provider', '0026_client_multiple_response_types'),
     ]
 
     operations = [
