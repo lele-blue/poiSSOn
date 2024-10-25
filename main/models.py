@@ -1,9 +1,11 @@
 from uuid import uuid4
 from django.contrib.auth.models import AbstractUser
+from django.shortcuts import get_object_or_404
 from oidc_provider.models import Client as OIDCClient
 from django.db import models
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_api_key.models import AbstractAPIKey
+from django.contrib.sessions.models import Session
 
 
 # Create your models here.
@@ -12,6 +14,21 @@ class User(AbstractUser):
     services = models.ManyToManyField("Service", through="UserServiceConnection")
     codes = models.ManyToManyField('Code')
     sso_groups = models.ManyToManyField("Group", related_name="users")
+
+
+    @staticmethod
+    def authenticate_service(username, password, service):
+        try:
+            user = User.objects.get(username = username)
+            try:
+                app_password = ApplicationPassword.objects.get(service_connection__user = user, service_connection__service=service)
+                if app_password.check_password(password):
+                    return user
+                return False
+            except ApplicationPassword.DoesNotExist:
+                return False
+        except User.DoesNotExist:
+            return False
 
 
 class Group(models.Model):
@@ -32,6 +49,7 @@ class Service(models.Model):
     allow_max_configurations = models.PositiveSmallIntegerField(null=True, blank=True, default=0)
     can_have_application_password = models.BooleanField(default=False)
     configuration_view_template = models.TextField(blank=True)
+    require_2fa_if_configured = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -105,6 +123,12 @@ class OriginMigrationToken(models.Model):
     codes = models.ManyToManyField("Code")
     expires = models.DateTimeField()
     account = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    parent_session = models.ForeignKey(Session, on_delete=models.CASCADE, null=True)
+
+
+class SessionTreeEdge(models.Model):
+    parent = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="children")
+    child = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="parent", unique=True) # unique since a child cant have two parents
 
 
 class Code(models.Model):
@@ -128,3 +152,4 @@ class UserServiceConnection(models.Model):
 
     class Meta:
         ordering = ["user"]
+        unique_together = ["user", "service"]

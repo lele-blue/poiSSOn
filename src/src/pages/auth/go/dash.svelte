@@ -1,6 +1,7 @@
 <script>
 
     import Input from "../../../components/Input.svelte";
+    import DefaultFrame from "../../../components/DefaultFrame.svelte";
     import LoadButton from "../../../components/LoadButton.svelte";
     import Button from "../../../components/Button.svelte";
     import {csrftoken} from "../../../snippets/csrf";
@@ -8,6 +9,7 @@
     import {slide} from "svelte/transition"
     import {do_redirect} from "../../../snippets/do_redirect.ts";
     import Loader from "../../../components/Loader.svelte";
+    import {currentUser} from "../../../state/currentUser.ts";
 
     let username = "";
     let password = "";
@@ -21,6 +23,7 @@
             if (res.status !== 200) {
                 $goto("/auth")
             }
+            currentUser.set(await res.text())
         })()
         const res = await fetch("/auth/api/services");
         if (res.status === 200) {
@@ -51,35 +54,6 @@
 </script>
 
 <style>
-    .login_root {
-        background-image: url("/auth/go/static/resolve/login_bg.jpg");
-        height: 100vh;
-        width: 100vw;
-        background-size: cover;
-    }
-
-    .login_wrapper {
-        height: 100vh;
-        width: 100vw;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .login_box {
-        display: flex;
-        width: 500px;
-        max-width: 100vw;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(8px);
-        border-radius: 3px;
-        flex-direction: column;
-        align-items: center;
-        font-family: sans-serif;
-        gap: 10px;
-    }
-
     .service_row {
         display: flex;
         gap: 5px;
@@ -98,9 +72,7 @@
 
 </style>
 
-<div class="login_root">
-    <div class="login_wrapper">
-        <div class="login_box">
+<DefaultFrame>
             <h1>Services</h1>
             {#if !services}
                 <Loader/>
@@ -109,7 +81,7 @@
                     <div class="service_row">
                         <LoadButton on:clicked={event => {event.detail.waitUntil(new Promise(() => {})); select_service(registration)}} icon={registration.service.icon}>{registration.service.name}</LoadButton>
                             {#if registration.service.can_have_application_password || registration.service.configuration_view_template}
-                                <Button on:click={() => {opened_services[registration.service.name] = !opened_services[registration.service.name]}} icon="cog"></Button>
+                                <Button dialogButton={true} on:click={() => {opened_services[registration.service.name] = !opened_services[registration.service.name]}} icon="cog"></Button>
                             {/if}
 
                     </div>
@@ -133,6 +105,4 @@
 <LoadButton vertical={true} on:clicked={event => {event.detail.waitUntil(new Promise(() => {})); $goto(`/auth/go/configure/${pcs.service.name}`)}} icon={pcs.service.icon}>{pcs.service.name}</LoadButton>
                 {/each}
             {/if}
-        </div>
-    </div>
-</div>
+</DefaultFrame>

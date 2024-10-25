@@ -14,6 +14,8 @@ django-oidc-provider = "*"
 django-stubs = "*"
 django-ratelimit = "*"
 djangorestframework-api-key = "==2.*"
+django-otp = "*"
+qrcode = "*"
 
 [dev-packages]
 

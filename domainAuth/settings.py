@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 import os
 import json
+import re
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -48,6 +49,8 @@ INSTALLED_APPS = [
     'oidc_provider',
     'rest_framework_api_key',
 
+    'django_otp',
+    'django_otp.plugins.otp_totp',
 ]
 
 MIDDLEWARE = [
@@ -57,9 +60,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'main.middleware.admin_needs_twofa'
 ]
 
 ROOT_URLCONF = 'domainAuth.urls'
@@ -173,3 +178,7 @@ if not DEBUG:
 LOGIN_URL = '/auth'
 SITE_URL = os.environ.get("SITE_URL")
 
+
+OTP_TOTP_ISSUER = "poiSSOn (" + re.match(r"(.+://)?([^\:\/]*).*", SITE_URL).group(2) + ")"
+
+OTP_TOTP_IMAGE = f"{SITE_URL}/favicon.ico"

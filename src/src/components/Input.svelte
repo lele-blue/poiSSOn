@@ -1,6 +1,7 @@
 <script>
     import Icon from "./Icon.svelte";
     import {slide} from "svelte/transition";
+    import {onMount} from "svelte";
     import {createEventDispatcher} from "svelte";
     export let placeholder;
     export let value = "";
@@ -13,6 +14,7 @@
     $: endIcon = error? 'alert-circle': trailingIcon;
 
     let focused = false;
+    export let autofocus = false;
     $: content = value.length;
     $: focused2 = focused || content;
 
@@ -34,6 +36,14 @@
             dispatch("submitted")
         }
     }
+
+    onMount(() => {
+        if (autofocus) {
+            input.focus();
+        }
+    });
+
+    let input;
 </script>
 
 <style>
@@ -154,9 +164,9 @@
         {/if}
         <span bind:this={labelElem} class:wiggle={wiggleElem && content} class="label" class:content class:focused class:error>{placeholder}</span>
         {#if password}
-            <input on:keydown={keydown} {autocomplete} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input bind:this={input} on:keydown={keydown} {autocomplete} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
         {:else}
-            <input on:keydown={keydown} {autocomplete} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input bind:this={input} on:keydown={keydown} {autocomplete} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
         {/if}
         {#if endIcon}
             <div aria-hidden="true" class="icon-container icon-container-end" title={error}>

@@ -1,5 +1,8 @@
+from urllib.parse import quote
 from django.http import HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
+
+from main.session_tree import check_is_2fa_authenticated_tree_aware
 from .views import check_user_has_permission
 from typing import Optional
 from .models import Service
@@ -50,8 +53,11 @@ def check_permissions(request, user, client):
         # assume client without attached service is open to all (or handles perms on its own)
         return None
 
-    if check_user_has_permission(service, user, request.session):
+    if check_user_has_permission(service, user, request.session, lambda: check_is_2fa_authenticated_tree_aware(request)):
         return None
+    if not request.user.is_verified():
+        return HttpResponseRedirect("/auth/go/login_state_mod/otp?next=" + quote(request.get_full_path()))
+
     return HttpResponseRedirect("/auth/go/fail")
 
 

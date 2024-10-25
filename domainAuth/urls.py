@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, SetApplicationPassword, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, ajax_login, login_check, UserGetOwnServices, GetNextCredential, \
-    SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey
+    SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator
 from main.oidc_provider_settings import wrap_authorize_post
 
 from oidc_provider.views import AuthorizeView
@@ -44,6 +44,11 @@ urlpatterns = [
     path('auth/api/next_credentials/retrieve', GetNextCredential.as_view()),
     path('auth/api/services', UserGetOwnServices.as_view()),
     path('auth/api/services/check', CheckPermissionForService.as_view()),
+    path('auth/api/2fa/status', TwoFactorStatus.as_view()),
+    path('auth/api/2fa/verification', TwoFactorVerification.as_view()),
+    path('auth/api/2fa/manage', TwoFactorManagement.as_view()),
+
+    path('auth/api/2fa/totp/qrcode', TotpQrGenerator.as_view()),
 
     path('auth/api/configuration/management/<str:service_name>/by_key/<str:query_id>', ConfigurationByKey.as_view()),
     path('auth/api/configuration/management/<str:service_name>/by_keys', ConfigurationByKeys.as_view()),
