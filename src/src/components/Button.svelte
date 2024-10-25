@@ -126,6 +126,15 @@
         text-transform: uppercase;
     }
 
+    button.dialogButton:hover {
+        background: #ffffff33;
+    }
+
+    button.dialogButton.destroy {
+        color: red;
+        --icon-col: #c60000;
+    }
+
     button.disabled {
         background: grey;
         color: white;

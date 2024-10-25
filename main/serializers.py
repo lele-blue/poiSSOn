@@ -1,3 +1,4 @@
+import django_otp
 from rest_framework import serializers
 
 from main.models import ServiceConfiguration, ServiceConfigurationStep, UserServiceConnection, Service, OriginMigrationToken
@@ -7,6 +8,10 @@ class ServiceSerializer(serializers.ModelSerializer):
     configurable = serializers.SerializerMethodField()
     max_configurations = serializers.SerializerMethodField()
     has_configurations = serializers.SerializerMethodField()
+    require_2fa = serializers.SerializerMethodField()
+
+    def get_require_2fa(self, obj: Service):
+        return obj.require_2fa_if_configured and not self.context["user"].is_verified() and django_otp.user_has_device(self.context["user"])
 
     def get_configurable(self, obj: Service):
         return obj.configuration_steps.exists()
@@ -28,7 +33,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
-        fields = ["name", "icon", "sub_url", "origin", "max_configurations", "has_configurations", "configurable", "can_have_application_password", "configuration_view_template"]
+        fields = ["name", "icon", "sub_url", "origin", "max_configurations", "has_configurations", "configurable", "can_have_application_password", "configuration_view_template", "require_2fa"]
 
 
 class ServiceConfigurationStepSerializer(serializers.ModelSerializer):
@@ -53,7 +58,7 @@ class UserConnectionSerializer(serializers.ModelSerializer):
     service = serializers.SerializerMethodField(read_only=True)
 
     def get_service(self, obj):
-        return ServiceSerializer(obj.service, context={"user": obj.user}).data
+        return ServiceSerializer(obj.service, context={"user": self.context.get("request_user") or obj.user}).data
 
     class Meta:
         model = UserServiceConnection
