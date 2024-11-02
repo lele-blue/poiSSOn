@@ -599,15 +599,7 @@ class ViewServiceConfiguration(APIView):
 
     def get(self, request, service_name):
         service = get_object_or_404(Service, name=service_name)
-        configs = ServiceConfiguration.objects.filter(value_for_step__service=service, user=request.user)
-
-        clean_objs = []
-
-        for idx in configs.values_list("set_idx", flat=True).distinct():
-            obj = dict()
-            for config in configs.filter(set_idx=idx):
-                obj[config.value_for_step.query_id] = config.value
-            clean_objs.append(obj)
+        clean_objs = self.get_configs_for_user(service, request.user)
 
         if len(clean_objs) == 0:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -654,6 +646,19 @@ class ViewServiceConfiguration(APIView):
                 final += fmt_line(line)
 
         return HttpResponse(final)
+
+    @staticmethod
+    def get_configs_for_user(service: Service, user: User, **filters):
+        configs = ServiceConfiguration.objects.filter(value_for_step__service=service, user=user, **filters)
+
+        clean_objs = []
+
+        for idx in configs.values_list("set_idx", flat=True).distinct():
+            obj = dict()
+            for config in configs.filter(set_idx=idx):
+                obj[config.value_for_step.query_id] = config.value
+            clean_objs.append(obj)
+        return clean_objs
 
 
 class SetApplicationPassword(APIView):

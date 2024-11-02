@@ -89,6 +89,7 @@ class ServiceConfigurationStep(models.Model):
     check_regex = models.CharField(max_length=512, blank=True)
     hidden = models.BooleanField(default=False)
     is_password = models.BooleanField()
+    include_in_claims = models.BooleanField(default=True)
     default = models.TextField(blank=True)
 
     def __str__(self):
