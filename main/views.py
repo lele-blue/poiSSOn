@@ -58,6 +58,19 @@ def ajax_login(request):
         else:
             raise PermissionDenied()
 
+def get_codes_for_service(session, user: User, service: Optional[Service]) -> List[Code]:
+    # without service no code
+    if not service:
+        return []
+    codes: List[Code] = []
+    if user.is_authenticated:
+        codes = list(user.codes.filter(service=service))
+    else:
+        codes = list(Code.objects.filter(pk__in=session.get('codes', []), service=service))
+
+    codes = [code for code in codes if code.is_valid()]
+    return codes
+
 
 # user_is verified is a lambda so lazy evaluation can be done
 def check_user_has_permission(url_or_service: Union[Service, str], user, session, user_is_verified=None):
@@ -71,15 +84,8 @@ def check_user_has_permission(url_or_service: Union[Service, str], user, session
         if UserServiceConnection.objects.filter(service=service, user=user).exists():
             return True
 
-    codes: List[Code] = []
-    if user.is_authenticated:
-        codes = list(user.codes.filter(service=service))
-    else:
-        codes = list(Code.objects.filter(pk__in=session.get('codes', []), service=service))
 
-    codes = [code for code in codes if code.is_valid()]
-
-    if len(codes) != 0: # at least 1 valid code
+    if len(get_codes_for_service(session, user, service)) != 0: # at least 1 valid code
         return True
 
     return False
@@ -109,8 +115,28 @@ def login_check(request):
                         is_ratelimited(request, 'login_check', key="ip", increment=True, rate="10/10m")
 
 
-    if check_user_has_permission(request.META.get("HTTP_X_ORIGINAL_URL"), request.user, request.session, user_is_verified=lambda: check_is_2fa_authenticated_tree_aware(request)):
-        return HttpResponse(status=status.HTTP_200_OK)
+    service = resolve_to_service(request.META.get("HTTP_X_ORIGINAL_URL"))
+    if service and check_user_has_permission(service, request.user, request.session, user_is_verified=lambda: check_is_2fa_authenticated_tree_aware(request)):
+        resp = HttpResponse(status=status.HTTP_200_OK)
+
+        ## Populate extra headers for forward_auth
+        if request.GET.get("poisson_extra_data") == "headers":
+            if service.allow_expose_forward_auth_headers_ips == "*" or request.META.get('REMOTE_ADDR') in service.allow_expose_forward_auth_headers_ips.split():
+                # find a valid code
+                codes = get_codes_for_service(request.session, request.user, service)
+                code: Optional[Code] = None
+
+                if len(codes) > 0: code = codes[0]
+                for header in service.allow_expose_forward_auth_headers.split():
+                    if header == "groups":
+                        resp.headers["X-Poisson-Groups"] = ",".join(((code.forward_auth_groups if code else None) or request.user.sso_groups).values_list("slug", flat=True))
+                    if header == "id":
+                        resp.headers["X-Poisson-ID"] = (code.forward_auth_user_id if code else None) or request.user.id
+                    if header == "name":
+                        resp.headers["X-Poisson-Name"] = (code.forward_auth_user_name if code else None) or request.user.get_full_name()
+                    if header == "email":
+                        resp.headers["X-Poisson-Email"] = (code.forward_auth_email if code else None) or request.user.email
+        return resp
     else:
         if request.GET.get("fail_mode", "") == "redirect":
             return HttpResponseRedirect(settings.SITE_URL + "/auth/go/unauthenticated" + "?url=" + quote(request.META.get("HTTP_X_ORIGINAL_URL", "")))

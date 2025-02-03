@@ -50,6 +50,8 @@ class Service(models.Model):
     can_have_application_password = models.BooleanField(default=False)
     configuration_view_template = models.TextField(blank=True)
     require_2fa_if_configured = models.BooleanField(default=False)
+    allow_expose_forward_auth_headers = models.TextField(blank=True)
+    allow_expose_forward_auth_headers_ips = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
@@ -134,6 +136,11 @@ class SessionTreeEdge(models.Model):
 class Code(models.Model):
     code = models.CharField(max_length=20)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='codes')
+
+    forward_auth_user_id = models.PositiveIntegerField(blank=True, null=True)
+    forward_auth_user_name = models.CharField(max_length=32, blank=True)
+    forward_auth_email = models.EmailField(null=True, blank=True)
+    forward_auth_groups = models.ManyToManyField(Group, blank=True)
 
     def is_valid(self):
         return True
