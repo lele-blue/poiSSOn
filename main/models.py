@@ -139,6 +139,7 @@ class Code(models.Model):
 
     forward_auth_user_id = models.PositiveIntegerField(blank=True, null=True)
     forward_auth_user_name = models.CharField(max_length=32, blank=True)
+    forward_auth_username = models.CharField(max_length=32, blank=True)
     forward_auth_email = models.EmailField(null=True, blank=True)
     forward_auth_groups = models.ManyToManyField(Group, blank=True)
 

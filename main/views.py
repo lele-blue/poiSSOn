@@ -132,6 +132,8 @@ def login_check(request):
                         resp.headers["X-Poisson-Groups"] = ",".join(((code.forward_auth_groups if code else None) or request.user.sso_groups).values_list("slug", flat=True))
                     if header == "id":
                         resp.headers["X-Poisson-ID"] = (code.forward_auth_user_id if code else None) or request.user.id
+                    if header == "username":
+                        resp.headers["X-Poisson-Username"] = (code.forward_auth_username if code else None) or request.user.username
                     if header == "name":
                         resp.headers["X-Poisson-Name"] = (code.forward_auth_user_name if code else None) or request.user.get_full_name()
                     if header == "email":
