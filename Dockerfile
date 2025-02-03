@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.11-alpine3.20
 
 RUN apk add --no-cache gcc musl-dev linux-headers npm bash && python -m pip install pipenv
 

@@ -1,0 +1,4 @@
+.env
+/db.sqlite3
+/src/node_modules
+/main/static/build
