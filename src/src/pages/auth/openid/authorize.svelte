@@ -16,6 +16,7 @@
         "email": "email",
         "profile": "account",
         "sso_groups": "account-group",
+        "configurations": "cog"
     }
 
 </script>

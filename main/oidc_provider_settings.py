@@ -3,7 +3,7 @@ from django.http import HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 
 from main.session_tree import check_is_2fa_authenticated_tree_aware
-from .views import check_user_has_permission
+from .views import ViewServiceConfiguration, check_user_has_permission, service_config_get_set_by_values
 from typing import Optional
 from .models import Service
 from oidc_provider.lib.claims import ScopeClaims
@@ -22,6 +22,11 @@ def userinfo(claims, user):
 
 class CustomScopeClaims(ScopeClaims):
 
+    info_configurations = (
+        _(u'Configurations'),
+        _(u'Your configuration for this Service'),
+    )
+
     info_sso_groups = (
         _(u'Groups'),
         _(u'Membership to your groups'),
@@ -37,6 +42,16 @@ class CustomScopeClaims(ScopeClaims):
         }
 
         return dic
+
+    def scope_configurations(self):
+        if not self.client.service:
+            raise Service.DoesNotExist("No Service found for client "+self.client.name)
+        configs = ViewServiceConfiguration.get_configs_for_user(self.client.service, self.user, value_for_step__include_in_claims=True, value_for_step__is_password=False)
+        return {
+            "configurations": configs,
+            **{f"poisson_cfg_{key}": val for key, val in (configs[0] if len(configs) else {}).items()}
+        }
+
 
 
 def check_permissions(request, user, client):
