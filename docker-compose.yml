@@ -1,4 +1,11 @@
 services:
+  nginx-dev:
+    image: "nginx:1.23"
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf
+      - ./nginx.ssoinclude.conf:/etc/nginx/nginx.ssoinclude.conf
+      - ./testroot:/app_root
+    network_mode: host
   nginx:
     image: "nginx:1.23"
     volumes:

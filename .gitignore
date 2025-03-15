@@ -1,4 +1,5 @@
 .env
 /db.sqlite3
 /src/node_modules
+/src/.routify
 /main/static/build

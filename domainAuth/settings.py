@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'whitenoise',
     'oidc_provider',
     'rest_framework_api_key',
+    'inline_static',
 
     'django_otp',
     'django_otp.plugins.otp_totp',

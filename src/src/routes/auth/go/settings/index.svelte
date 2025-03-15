@@ -1,7 +1,7 @@
 <script>
-    import DefaultFrame from "../../../components/DefaultFrame.svelte";
-    import Button from "../../../components/Button.svelte";
-    import {currentUser} from "../../../state/currentUser.ts";
+    import DefaultFrame from "../../../../components/DefaultFrame.svelte";
+    import Button from "../../../../components/Button.svelte";
+    import {currentUser} from "../../../../state/currentUser.ts";
     import {goto} from "@roxi/routify";
          (async () => {
             const res = await fetch("/auth/api/alt_ping");

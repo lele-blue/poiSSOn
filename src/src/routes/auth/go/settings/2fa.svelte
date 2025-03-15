@@ -11,7 +11,7 @@
     import {check_login} from "../../../../snippets/check_login.ts";
     import {handle_400} from "../../../../snippets/handle_2fa_400.ts";
     import {csrftoken} from "../../../../snippets/csrf.ts";
-    import {goto, redirect} from "@roxi/routify";
+    import {goto} from "@roxi/routify";
 
     check_login();
     const goto_ = $goto;
@@ -20,7 +20,7 @@
         const resp = await fetch("/auth/api/2fa/manage");
 
         if (400 <= resp.status && resp.status < 500) {
-            handle_400(await resp.json(), $redirect)
+            handle_400(await resp.json(), (path, params) => $goto(path, params, {mode: "replace"}));
             return []
         }
         if (resp.status !== 200) {
@@ -95,7 +95,7 @@
             {/if}
             </div>
         </OTPDeviceList>
-        <Button icon="plus" on:click={() => $goto("/auth/go/settings/2fa_add")}>Add new Device</Button>
+        <Button icon="plus" on:click={() => $goto("/auth/go/settings/2fa_choose")}>Add new Device</Button>
     {/if}
 
     {#await devicesPr}

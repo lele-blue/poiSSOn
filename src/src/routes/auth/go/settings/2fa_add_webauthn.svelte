@@ -16,10 +16,6 @@
 
     check_login();
 
-    const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-
-    const key = genRanHex(80);
-
     async function qrcode() {
         const resp = await fetch("/auth/api/2fa/totp/qrcode", {
 						method: "POST",
@@ -53,7 +49,7 @@
 								"Content-Type": "application/json",
 								"X-CSRFToken": csrftoken(),
 						},
-            body: JSON.stringify({key, token, name, type:"otp_totp.totpdevice"}),
+            body: JSON.stringify({key, token, name: "@autofill", type:"otp_webauthn.public-key"}),
         });
         if (resp.status !== 200) error = handle_400(await resp.json(), $goto);
         else {
@@ -72,26 +68,17 @@
     }
 </style>
 
-<DefaultFrame back="/auth/go/settings/2fa" settings={false}>
-    <h1>Add new 2FA Device</h1>
-
-    {#await qrcode(key)}
-        <Loader/>
-    {:then qrcode}
-        <img src={qrcode} alt="The TOTP Qr code"/>
-    {/await}
-
-    <Input error={name_error} bind:value={name} icon={get_icon(name)} autofocus={true} placeholder="Name this device"/>
-    <Input error={token_error} bind:value={token} icon={get_icon(name)} autofocus={false} placeholder="Please enter the current token"/>
-
+<DefaultFrame back="/auth/go/settings/2fa_choose" settings={false}>
+    <h1>Add new Key</h1>
+    <Loader/>
     {#if error}
         <div transition:slide class="error_box">
             <Icon icon="alert" color="red"/>
             <p>{error}</p>
         </div>
+        <LoadButton icon="reload" on:clicked={e => e.detail.waitUntil(submit())}>Create Device</LoadButton>
     {/if}
 
-    <LoadButton icon="plus" on:clicked={e => e.detail.waitUntil(submit())}>Create Device</LoadButton>
 
 
 

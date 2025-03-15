@@ -16,6 +16,7 @@ django-ratelimit = "*"
 djangorestframework-api-key = "==2.*"
 django-otp = "*"
 qrcode = "*"
+django-inline-static = "*"
 
 [dev-packages]
 

@@ -1,4 +1,3 @@
-import {get} from "svelte/store";
 export function handle_400(data, goto) {
     switch (data.action) {
         case "login": {
@@ -6,7 +5,7 @@ export function handle_400(data, goto) {
             break;
         }
         case "upgrade": {
-            goto("/auth/go/login_state_mod/otp?next=" + encodeURIComponent(location.href));
+            goto("/auth/go/login_state_mod/otp", {next: encodeURIComponent(location.href)});
             break;
         }
         case "fail": {
