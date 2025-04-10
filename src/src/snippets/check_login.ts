@@ -5,6 +5,6 @@ export async function check_login() {
     if (res.status !== 200) {
         location.href = "/auth";
     }
-    currentUser.set(await res.text())
+    currentUser.set(await res.json())
 }
 

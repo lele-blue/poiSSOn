@@ -1,3 +1,4 @@
+import json
 import time
 from urllib.parse import quote, quote_plus
 from django.http import HttpResponseRedirect
@@ -7,8 +8,8 @@ import django_otp
 import requests
 import django_otp.plugins.otp_totp.models as otp_totp
 
-from main.models import Code, Service, User, UserServiceConnection
-from main.views import check_user_has_permission, resolve_to_service
+from main.models import Code, CoreSetting, Service, User, UserServiceConnection
+from main.views import check_user_has_service_permission, resolve_to_service
 
 # Create your tests here.
 
@@ -205,21 +206,57 @@ class PermissionsTestCase(TestCase):
         self.serviceCode.delete()
 
     def test_user_can_access_valid_service(self):
-        self.assertTrue(check_user_has_permission(self.serviceValid, self.user, {}))
+        self.assertTrue(check_user_has_service_permission(self.serviceValid, self.user, {}))
 
     def test_user_cant_access_invalid_service(self):
-        self.assertFalse(check_user_has_permission(self.serviceInvalid, self.user, {}))
+        self.assertFalse(check_user_has_service_permission(self.serviceInvalid, self.user, {}))
 
     def test_user_can_access_valid_service_from_url(self):
-        self.assertTrue(check_user_has_permission(f"http://{self.serviceValid.origin}{self.serviceValid.sub_url}", self.user, {}))
+        self.assertTrue(check_user_has_service_permission(f"http://{self.serviceValid.origin}{self.serviceValid.sub_url}", self.user, {}))
 
     def test_user_cant_access_invalid_service_from_url(self):
-        self.assertFalse(check_user_has_permission(f"http://{self.serviceInvalid.origin}{self.serviceInvalid.sub_url}", self.user, {}))
+        self.assertFalse(check_user_has_service_permission(f"http://{self.serviceInvalid.origin}{self.serviceInvalid.sub_url}", self.user, {}))
 
     def test_regex_url_resolve(self):
         self.assertEqual(resolve_to_service(f"http://{self.serviceRegex.origin}/url4"), self.serviceRegex)
 
     def test_regex_url_resolve_fail(self):
         self.assertIsNone(resolve_to_service(f"http://{self.serviceRegex.origin}/url5"))
+
+
+class CoreSettingsTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user("testuser", "test@poisson.tld", "")
+        self.user_priv = User.objects.create_user("testuser2", "test@poisson.tld", "")
+        self.user_priv.is_superuser = True
+        self.user_priv.save()
+
+
+        CoreSetting(key="poisson.core.webauthn.resident_key_requirement", value="testval").save()
+
+    def tearDown(self):
+        self.user.delete()
+        self.user_priv.delete()
+
+    def test_prived_user_can_read(self):
+        self.client.force_login(self.user_priv)
+        res = self.client.get("/auth/api/manager/core_setting/poisson.core.webauthn.resident_key_requirement")
+        self.assertEqual(res.status_code, 200)
+
+    def test_prived_user_can_write(self):
+        self.client.force_login(self.user_priv)
+        res = self.client.patch("/auth/api/manager/core_setting/poisson.core.webauthn.resident_key_requirement", json.dumps({"value": "new"}), content_type="application/json")
+        self.assertEqual(res.status_code, 200)
+
+    def test_unprived_user_cant_write(self):
+        self.client.force_login(self.user)
+        res = self.client.post("/auth/api/manager/core_setting/poisson.core.webauthn.resident_key_requirement", json.dumps({"value": "new"}), content_type="application/json")
+        self.assertEqual(res.status_code, 403)
+
+    def test_unprived_user_cant_read(self):
+        self.client.force_login(self.user)
+        res = self.client.get("/auth/api/manager/core_setting/poisson.core.webauthn.resident_key_requirement")
+        self.assertEqual(res.status_code, 403)
 
 

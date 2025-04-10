@@ -1,4 +1,4 @@
-export function handle_400(data, goto) {
+export function handle_400(data: {action: string, reason: string}, goto: (url: string, parms: any) => void) {
     switch (data.action) {
         case "login": {
             location.href = "/auth?next=" + encodeURIComponent(location.href)

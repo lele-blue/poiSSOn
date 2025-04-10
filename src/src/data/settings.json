@@ -1,0 +1,79 @@
+{
+  "categories": [
+    {
+      "name": "PoiSSOn Core",
+      "slug": "core",
+      "icon": "cog",
+      "pages": [
+        {
+          "name": "Webauthn",
+          "header_text": "Webauthn/Passkeys can be configured here",
+          "slug": "webauthn",
+          "permissions": {
+            "permissions": ["poisson.core.webauthn"]
+          },
+          "content": [
+            {
+              "name": "Authenticator Attachment Type",
+              "help_text": "This setting controls what authenticators the browser will offer. <a href='https://www.w3.org/TR/webauthn-2/#enum-attachment' target='_blank'>More information</a>",
+              "permissions": {
+                "permissions": ["poisson.core/poisson.core.webauthn.authenticator_attachment"]
+              },
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.choice",
+              "widget_data": {
+                "choices": [
+                  {
+                    "key": "poisson.core.webauthn.authenticator_attachment.cross_platform",
+                    "text": "Cross Platform"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.authenticator_attachment.platform",
+                    "text": "Platform"
+                  }
+                ]
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.webauthn.authenticator_attachment"
+              }
+            },
+            {
+              "name": "Resident Key Requirement",
+              "help_text": "This setting controls what authenticators the browser will offer. <a href='https://www.w3.org/TR/webauthn-2/#enum-residentKeyRequirement' target='_blank'>More information</a>",
+              "permissions": {
+                "permissions": ["poisson.core/poisson.core.webauthn.resident_key_requirement"]
+              },
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.choice",
+              "widget_data": {
+                "choices": [
+                  {
+                    "key": "poisson.core.webauthn.resident_key_requirement.require",
+                    "text": "Require resident key"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.resident_key_requirement.prefer",
+                    "text": "Prefer resident key"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.resident_key_requirement.discourage",
+                    "text": "Discourage resident key"
+                  }
+                ]
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.webauthn.resident_key_requirement"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "slug": "users",
+      "icon": "account",
+      "pages": []
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED, UNPROCESSABLE_ENTITY
+from rest_framework.renderers import JSONRenderer
 import re
 import base64
 from django.conf import settings
@@ -32,9 +33,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from main.models import ApplicationPassword, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
-from main.permissions import HasServicePermission, IsMasterSession
-from main.serializers import ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer
+from main.models import ApplicationPassword, CoreSetting, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
+from main.permissions import HasManagePermission, HasServicePermission, IsMasterSession
+from main.serializers import CoreSettingValue, ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
 from main.session_tree import check_is_2fa_authenticated_tree_aware
 
 
@@ -73,7 +74,7 @@ def get_codes_for_service(session, user: User, service: Optional[Service]) -> Li
 
 
 # user_is verified is a lambda so lazy evaluation can be done
-def check_user_has_permission(url_or_service: Union[Service, str], user, session, user_is_verified=None):
+def check_user_has_service_permission(url_or_service: Union[Service, str], user, session, user_is_verified=None):
     service: Optional[Service] = url_or_service
     if not isinstance(url_or_service, Service):
         service = resolve_to_service(url_or_service)
@@ -93,7 +94,7 @@ def check_user_has_permission(url_or_service: Union[Service, str], user, session
 
 def login_check(request):
     if not request.META.get("HTTP_X_ORIGINAL_URL") and request.user.is_authenticated:
-        return HttpResponse(request.user.username, status=200)
+        return HttpResponse(JSONRenderer().render(UserPermissionStateSerializer(request.user).data), status=200)
 
     if request.META.get('HTTP_AUTHORIZATION'):
         # just check if we even try to authenticate
@@ -116,7 +117,7 @@ def login_check(request):
 
 
     service = resolve_to_service(request.META.get("HTTP_X_ORIGINAL_URL"))
-    if service and check_user_has_permission(service, request.user, request.session, user_is_verified=lambda: check_is_2fa_authenticated_tree_aware(request)):
+    if service and check_user_has_service_permission(service, request.user, request.session, user_is_verified=lambda: check_is_2fa_authenticated_tree_aware(request)):
         resp = HttpResponse(status=status.HTTP_200_OK)
 
         ## Populate extra headers for forward_auth
@@ -170,7 +171,7 @@ def redirect_unauthenticated(request):
     elif service.require_2fa_if_configured and request.user.is_authenticated and user_has_device(request.user, True) and not request.user.is_verified():
         return HttpResponseRedirect(f"/auth/go/login_state_mod/otp?next={quote(request.GET.get('url'))}")
     # Logged in and user has permission
-    elif check_user_has_permission(request.GET.get("url"), request.user, request.session):
+    elif check_user_has_service_permission(request.GET.get("url"), request.user, request.session):
         token = CreateOriginMigrationToken.create_token(request.GET.get('url'), request.user, request.session)
         url = urlparse(request.GET.get('url', ''))
         return HttpResponseRedirect(url.scheme + "://" + url.netloc + "/_sso?token=" + token.token + "&next=" + quote(request.GET.get("url")))
@@ -193,9 +194,11 @@ class GetServiceInfo(APIView):
 
 
 class GetServiceConfigurationInfo(APIView):
+    permission_classes = [IsMasterSession]
+
     def get(self, request, name):
         service = get_object_or_404(Service, name=name)
-        if not check_user_has_permission(service, request.user, request.session):
+        if not check_user_has_service_permission(service, request.user, request.session):
             raise Http404()
         return Response(ServiceConfigurationStepSerializer(ServiceConfigurationStep.objects.filter(service=service, hidden=False), many=True).data)
 
@@ -206,12 +209,16 @@ class CheckPermissionForService(APIView):
         return Response(status=200 if login_check(request).status_code == 200 else 400)
 
 class TwoFactorStatus(APIView):
+    permission_classes = [IsMasterSession]
+
     def get(self, request):
         resp = { 'authenticated': request.user.is_authenticated, 'verified': request.user.is_verified() }
         return Response(status=OK, data=resp)
 
 
 class TwoFactorVerification(APIView):
+    permission_classes = [IsMasterSession]
+
     def get(self, request):
         if not request.user.is_authenticated:
             return HttpResponse("Can't verify 2FA when not logged in", status=UNAUTHORIZED)
@@ -250,6 +257,8 @@ def twoFactorPermissionCheck(request):
         return None
 
 class TwoFactorManagement(APIView):
+    permission_classes = [IsMasterSession]
+
     def get(self, request: HttpRequest):
         auth_error = twoFactorPermissionCheck(request)
         if not auth_error is None:
@@ -310,6 +319,8 @@ class TwoFactorManagement(APIView):
         return Response(data={'action': 'fail', 'reason': "No device with id " + id}, status=NOT_FOUND)
 
 class TotpQrGenerator(APIView):
+    permission_classes = [IsMasterSession]
+
     def post(self, request):
         auth_error = twoFactorPermissionCheck(request)
         if not auth_error is None:
@@ -386,6 +397,8 @@ class CheckRedirect(APIView):
 
 
 class CreateOriginMigrationToken(APIView):
+    permission_classes = [IsMasterSession]
+
     @staticmethod
     def create_token(url, user, session):
 
@@ -446,6 +459,8 @@ class ConsumeCode(APIView):
 
 
 class UserGetOwnServices(APIView):
+    permission_classes = [IsMasterSession]
+
     def get(self, request):
         return Response(data=UserConnectionSerializer(UserServiceConnection.objects.filter(user=request.user), many=True, context={"request_user": request.user}).data)
 
@@ -474,7 +489,7 @@ class ConfigurationsAPI(APIView):
 
         service = get_object_or_404(Service, name=service_name)
 
-        if not check_user_has_permission(service, request.user, request.session):
+        if not check_user_has_service_permission(service, request.user, request.session):
             raise PermissionDenied()
 
         configSteps: QuerySet[ServiceConfigurationStep, ServiceConfigurationStep] = service.configuration_steps
@@ -516,7 +531,6 @@ class ConfigurationsAPI(APIView):
 
 
 def service_config_get_set_by_values(service: Service, **match_by):
-    print(match_by)
     query = Q(value_for_step__service=service)
     step_value_query = Q()
 
@@ -694,6 +708,7 @@ class SetApplicationPassword(APIView):
 
     def post(self, request, service_name):
         service = get_object_or_404(Service, name=service_name)
+        self.check_object_permissions(request, service)
         connection = get_object_or_404(UserServiceConnection, user=request.user, service=service)
 
         if not connection.application_password:
@@ -721,3 +736,19 @@ class CheckApplicationPassword(APIView):
             return Response({"status": "no-match", "detail": "Invalid Password"}, status=status.HTTP_403_FORBIDDEN)
 
 
+class ManagerCoreSetting(APIView):
+    permission_classes = [HasManagePermission]
+    manage_permission = "poisson.manage"
+
+    def get(self, request, setting):
+        self.check_object_permissions(request, setting)
+        return Response(CoreSettingValue(get_object_or_404(CoreSetting, key=setting)).data)
+
+    def patch(self, request, setting):
+        self.check_object_permissions(request, setting)
+        settingObj = get_object_or_404(CoreSetting, key=setting)
+        setting_serializer = CoreSettingValue(settingObj, request.data, context={"key": setting})
+        setting_serializer.is_valid(raise_exception=True)
+        setting_serializer.update(settingObj, request.data)
+
+        return Response(CoreSettingValue(settingObj).data)

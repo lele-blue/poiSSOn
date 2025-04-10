@@ -13,7 +13,7 @@ export default defineConfig({
         emptyOutDir: true
     },
     clearScreen: false,
-    resolve: { alias: { '@': resolve('src') } },
+    resolve: { alias: { '@': resolve('src'), '@components': resolve('src/components') } },
     plugins: [
         routify({
             render: { ssr: false, ssg: false },

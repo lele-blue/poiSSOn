@@ -2,7 +2,7 @@ from django_ratelimit.core import is_ratelimited
 from rest_framework.permissions import BasePermission
 from rest_framework_api_key.permissions import BaseHasAPIKey
 
-from main.models import ConfigurationApiKey, Service
+from main.models import ConfigurationApiKey, Service, User
 from main.session_tree import is_master_session
 
 
@@ -32,3 +32,18 @@ class HasServicePermission(BaseHasAPIKey):
 class IsMasterSession(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and is_master_session(request)
+
+
+def check_user_has_manage_permission(user: User, permission: str):
+    if user.is_superuser:
+        return True
+
+    return False
+
+
+class HasManagePermission(BasePermission):
+    def has_permission(self, request, view):
+        return check_user_has_manage_permission(request.user, view.manage_permission)
+
+    def has_object_permission(self, request, view, obj: str):
+        return check_user_has_manage_permission(request.user, f"poisson.core/{obj}")

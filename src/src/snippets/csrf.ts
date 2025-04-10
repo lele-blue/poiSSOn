@@ -11,6 +11,6 @@ function getCookie(name) {
             }
         }
     }
-    return cookieValue;
+    return cookieValue!;
 }
 export const csrftoken = () => getCookie('csrftoken');

@@ -179,7 +179,10 @@ if not DEBUG:
 LOGIN_URL = '/auth'
 SITE_URL = os.environ.get("SITE_URL")
 
+SITE_NAME = re.match(r"(.+://)?([^\:\/]*).*", SITE_URL).group(2)
 
-OTP_TOTP_ISSUER = "poiSSOn (" + re.match(r"(.+://)?([^\:\/]*).*", SITE_URL).group(2) + ")"
+OTP_TOTP_ISSUER = "poiSSOn (" + SITE_NAME + ")"
+OTP_WEBAUTHN_RP_NAME = OTP_TOTP_ISSUER
+OTP_WEBAUTHN_RP_ID = SITE_NAME
 
 OTP_TOTP_IMAGE = f"{SITE_URL}/favicon.ico"

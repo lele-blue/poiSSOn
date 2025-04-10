@@ -10,6 +10,7 @@
     export let error = null;
     export let trailingIcon = null;
     export let password = false;
+    export let full_width = false;
 
     $: endIcon = error? 'alert-circle': trailingIcon;
 
@@ -155,7 +156,7 @@
     }
 </style>
 
-<div style="border-radius: 3px; width: 80%">
+<div style="border-radius: 3px; width: {full_width?100:80}%">
     <label class:icon>
         {#if icon}
             <div aria-hidden="true" class="icon-container">

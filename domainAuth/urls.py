@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, SetApplicationPassword, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, ajax_login, login_check, UserGetOwnServices, GetNextCredential, \
-    SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator
+    SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
 from main.oidc_provider_settings import wrap_authorize_post
 
 from oidc_provider.views import AuthorizeView
@@ -47,7 +47,6 @@ urlpatterns = [
     path('auth/api/2fa/status', TwoFactorStatus.as_view()),
     path('auth/api/2fa/verification', TwoFactorVerification.as_view()),
     path('auth/api/2fa/manage', TwoFactorManagement.as_view()),
-
     path('auth/api/2fa/totp/qrcode', TotpQrGenerator.as_view()),
 
     path('auth/api/configuration/management/<str:service_name>/by_key/<str:query_id>', ConfigurationByKey.as_view()),
@@ -56,6 +55,8 @@ urlpatterns = [
     path('auth/api/application_password/management/<str:service_name>/check_password/<str:username>', CheckApplicationPassword.as_view()),
     path('auth/api/configuration/view/<str:service_name>', ViewServiceConfiguration.as_view()),
     path('auth/api/application_password/<str:service_name>', SetApplicationPassword.as_view()),
+
+    path('auth/api/manager/core_setting/<str:setting>', ManagerCoreSetting.as_view()),
 
     path('auth/openid/', include('oidc_provider.urls', namespace='oidc_provider')),
     path('auth/<path:url>', main_view),

@@ -1,7 +1,8 @@
 import django_otp
 from rest_framework import serializers
 
-from main.models import ServiceConfiguration, ServiceConfigurationStep, UserServiceConnection, Service, OriginMigrationToken
+from main.core_settings import CORE_SETTINGS
+from main.models import CoreSetting, ServiceConfiguration, ServiceConfigurationStep, User, UserServiceConnection, Service, OriginMigrationToken
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -63,3 +64,34 @@ class UserConnectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserServiceConnection
         fields = ["service", "username", "passwordPlain"]
+
+
+class UserPermissionStateSerializer(serializers.ModelSerializer):
+    permissions = serializers.SerializerMethodField()
+
+    def get_permissions(self, obj: User):
+        perms = []
+        if obj.is_superuser:
+            perms.append("poisson.manage")
+            perms.append("poisson.core.webauthn")
+            perms.append("poisson.core.webauthn.set_resident_type")
+        return perms
+
+    class Meta:
+        model = User
+        fields = ["username", "permissions"]
+
+
+class CoreSettingValue(serializers.ModelSerializer):
+    class Meta:
+        model = CoreSetting
+        fields = ["key", "value"]
+        read_only_fields = ["key"]
+
+    def validate(self, data):
+        if CORE_SETTINGS[self.context.get("key")]["type"] == "choice":
+            if data.get("value") not in CORE_SETTINGS[self.context.get("key")]["values"]:
+                raise serializers.ValidationError("value must be one of " + ",".join(CORE_SETTINGS[self.context.get("key")]["values"]))
+
+        return data
+

@@ -1,3 +1,4 @@
+import random
 from uuid import uuid4
 from django.contrib.auth.models import AbstractUser
 from django.shortcuts import get_object_or_404
@@ -7,13 +8,21 @@ from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_api_key.models import AbstractAPIKey
 from django.contrib.sessions.models import Session
 
+from string import ascii_letters
 
 # Create your models here.
+
+def generate_id(prefix):
+    return f"{prefix}_" + "".join(random.choices([*list(ascii_letters), *map(str, range(10))], k=64-len(prefix)-1))
+
+def generate_user_id():
+    return generate_id("user")
 
 class User(AbstractUser):
     services = models.ManyToManyField("Service", through="UserServiceConnection")
     codes = models.ManyToManyField('Code')
     sso_groups = models.ManyToManyField("Group", related_name="users")
+    uid = models.CharField(max_length=64, unique=True, default=generate_user_id)
 
 
     @staticmethod
@@ -162,3 +171,9 @@ class UserServiceConnection(models.Model):
     class Meta:
         ordering = ["user"]
         unique_together = ["user", "service"]
+
+
+
+class CoreSetting(models.Model):
+    key = models.CharField(primary_key=True, max_length=64)
+    value = models.TextField()

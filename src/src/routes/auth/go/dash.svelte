@@ -18,13 +18,6 @@
     let pending_configuration_servies = [];
 
     (async () => {
-        await (async () => {
-            const res = await fetch("/auth/api/alt_ping");
-            if (res.status !== 200) {
-                $goto("/auth")
-            }
-            currentUser.set(await res.text())
-        })()
         const res = await fetch("/auth/api/services");
         if (res.status === 200) {
             services = await res.json();

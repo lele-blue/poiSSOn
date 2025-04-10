@@ -15,12 +15,13 @@
     let focused = false;
     let opened = false;
 
-    const options = [];
+    let options = [];
     const dispatch = createEventDispatcher();
 
     function rescan_options() {
         /** @type HTMLOptionElement*/
         let option;
+        options = []
 
         for (option of select.children) {
             for (let child of option.children) {
@@ -66,12 +67,24 @@
         else {
             node.style.top = rect.bottom + 2 - root.getBoundingClientRect().top + "px"; 
         }
+        node.style.left = (rect.left + 2 - root.getBoundingClientRect().left + "px")
     }
 
     function keydown(event) {
         if (event.code === "Escape") {
             opened = false;
         }
+    }
+
+    async function onchange() {
+        await tick(); 
+        select = select; 
+        opened = false; 
+        dispatch("change");
+    }
+
+    $: {
+        onchange(value, options);
     }
 </script>
 
@@ -175,7 +188,7 @@
             <Icon color="var(--icon-secondary-col)" icon="chevron-down"/>
         </div>
     </div>
-    <select bind:value bind:this={select} on:change={async () => {await tick(); select = select; opened = false; dispatch("change")}} on:focus={() => {focused = true}} on:blur={focused = false}>
+    <select bind:value bind:this={select} on:change={onchange} on:focus={() => {focused = true}} on:blur={focused = false}>
         <slot/>
     </select>
     <div class="active_bar" aria-hidden="true"></div>
