@@ -72,17 +72,17 @@
         <OTPDeviceList {devices}>
             <div slot="buttons" let:device>
                 <div style="display: flex; align-items: center; gap:5px">
-                    {#if !editing.includes(device.id)}
-                        <Button dialogButton={true} icon="pencil" on:click={() => {editing = [...editing, device.id]; new_names[device.id] = device.name}} />
+                    {#if !editing.includes(device.persistent_id)}
+                        <Button dialogButton={true} icon="pencil" on:click={() => {editing = [...editing, device.persistent_id]; new_names[device.persistent_id] = device.name}} />
                     {:else}
-                        <LoadButton on:clicked={ev => ev.detail.waitUntil(set_new_name(device.persistent_id, new_names[device.id]))} icon="check"/>
+                        <LoadButton on:clicked={ev => ev.detail.waitUntil(set_new_name(device.persistent_id, new_names[device.persistent_id]))} icon="check"/>
                     {/if}
                     <LoadButton on:clicked={e => {e.detail.waitUntil(delete_device(device.persistent_id))}} destroy={true} dialogButton={true} icon="delete" />
                 </div>
             </div>
 
             <div style="flex-grow: 1" slot="main" let:device>
-            {#if !editing.includes(device.id)}
+            {#if !editing.includes(device.persistent_id)}
 
                 <div style="display: flex; align-items: center; gap:5px">
                     {#if device.icon}
@@ -94,7 +94,7 @@
                 </div>
             {:else}
                 <div>
-                    <Input autofocus={true} icon={get_icon(new_names[device.id])} bind:value={new_names[device.id]} placeholder={`New Name for ${device.name}`}/>
+                    <Input autofocus={true} icon={get_icon(new_names[device.persistent_id])} bind:value={new_names[device.persistent_id]} placeholder={`New Name for ${device.name}`}/>
                 </div>
             {/if}
             </div>
