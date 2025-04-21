@@ -75,9 +75,9 @@
                     {#if !editing.includes(device.id)}
                         <Button dialogButton={true} icon="pencil" on:click={() => {editing = [...editing, device.id]; new_names[device.id] = device.name}} />
                     {:else}
-                        <LoadButton on:clicked={ev => ev.detail.waitUntil(set_new_name(device.id, new_names[device.id]))} icon="check"/>
+                        <LoadButton on:clicked={ev => ev.detail.waitUntil(set_new_name(device.persistent_id, new_names[device.id]))} icon="check"/>
                     {/if}
-                    <LoadButton on:clicked={e => {e.detail.waitUntil(delete_device(device.id))}} destroy={true} dialogButton={true} icon="delete" />
+                    <LoadButton on:clicked={e => {e.detail.waitUntil(delete_device(device.persistent_id))}} destroy={true} dialogButton={true} icon="delete" />
                 </div>
             </div>
 
@@ -85,7 +85,11 @@
             {#if !editing.includes(device.id)}
 
                 <div style="display: flex; align-items: center; gap:5px">
-                    <Icon icon={get_icon(device.name)}/>
+                    {#if device.icon}
+                        <img alt="Icon of the authenticator" height="24px" width="24px" src={device.icon} />
+                    {:else}
+                        <Icon icon={get_icon(device.name)}/>
+                    {/if}
                     {device.name}
                 </div>
             {:else}

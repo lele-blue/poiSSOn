@@ -21,7 +21,7 @@ def generate_user_id():
 class User(AbstractUser):
     services = models.ManyToManyField("Service", through="UserServiceConnection")
     codes = models.ManyToManyField('Code')
-    sso_groups = models.ManyToManyField("Group", related_name="users")
+    sso_groups = models.ManyToManyField("Group", related_name="users", blank=True)
     uid = models.CharField(max_length=64, unique=True, default=generate_user_id)
 
 

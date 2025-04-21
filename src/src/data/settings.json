@@ -24,6 +24,10 @@
               "widget_data": {
                 "choices": [
                   {
+                    "key": "poisson.core.webauthn.authenticator_attachment.none",
+                    "text": "All Supported"
+                  },
+                  {
                     "key": "poisson.core.webauthn.authenticator_attachment.cross_platform",
                     "text": "Cross Platform"
                   },
@@ -35,6 +39,73 @@
               },
               "type_data": {
                 "poisson.core_setting.key": "poisson.core.webauthn.authenticator_attachment"
+              },
+              "warn_if": [
+                {"match": "poisson.core.webauthn.authenticator_attachment.cross_platform", "message": "This will prevent passkeys from working"},
+                {"match": "poisson.core.webauthn.authenticator_attachment.platform", "message": "This will prevent hardware keys from working and enforce passkeys"}
+              ]
+            },
+            {
+              "name": "User Verification Requirement",
+              "help_text": "This setting controls what authenticators the browser will offer. <a href='https://www.w3.org/TR/webauthn-2/#enum-userVerificationRequirement' target='_blank'>More information</a>",
+              "permissions": {
+                "permissions": ["poisson.core/poisson.core.webauthn.user_verification_requirement"]
+              },
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.choice",
+              "widget_data": {
+                "choices": [
+                  {
+                    "key": "poisson.core.webauthn.user_verification_requirement.require",
+                    "text": "Require Authentication"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.user_verification_requirement.prefer",
+                    "text": "Prefer Authentication"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.user_verification_requirement.discourage",
+                    "text": "Discourage Authentication"
+                  }
+                ]
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.webauthn.user_verification_requirement"
+              },
+              "warn_if": [
+                {"match": "poisson.core.webauthn.user_verification_requirement.require", "message": "This may not consistently be available (e.g. if the laptop lid is closed or no fingerprints are set up)<br>If no verification was performed, authentication will fail silently with a generic error."}
+              ]
+            },
+            {
+              "name": "Authenticator Hint",
+              "help_text": "This setting controls what authenticators the browser will offer first (if supported).<br/><br/><a href='https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#hints' target='_blank'>More information</a>",
+              "permissions": {
+                "permissions": ["poisson.core/poisson.core.webauthn.hint"]
+              },
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.choice",
+              "widget_data": {
+                "choices": [
+                  {
+                    "key": "poisson.core.webauthn.hint.none",
+                    "text": "No preference"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.hint.security_key",
+                    "text": "Security Key"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.hint.client_device",
+                    "text": "Client Device"
+                  },
+                  {
+                    "key": "poisson.core.webauthn.hint.hybrid",
+                    "text": "Hybrid"
+                  }
+                ]
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.webauthn.hint"
               }
             },
             {
@@ -63,7 +134,10 @@
               },
               "type_data": {
                 "poisson.core_setting.key": "poisson.core.webauthn.resident_key_requirement"
-              }
+              },
+              "warn_if": [
+                {"match": "poisson.core.webauthn.resident_key_requirement.discourage", "message": "This will prevent passkeys from working"}
+              ]
             }
           ]
         }

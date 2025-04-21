@@ -1,8 +1,11 @@
 import django_otp
+from django_otp.models import Device
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 
 from main.core_settings import CORE_SETTINGS
 from main.models import CoreSetting, ServiceConfiguration, ServiceConfigurationStep, User, UserServiceConnection, Service, OriginMigrationToken
+from otp_webauthn.models import WebauthnDevice
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -73,8 +76,12 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
         perms = []
         if obj.is_superuser:
             perms.append("poisson.manage")
+            perms.append("poisson.admin")
             perms.append("poisson.core.webauthn")
-            perms.append("poisson.core.webauthn.set_resident_type")
+            perms.append("poisson.core/poisson.core.webauthn.resident_key_requirement")
+            perms.append("poisson.core/poisson.core.webauthn.hint")
+            perms.append("poisson.core/poisson.core.webauthn.user_verification_requirement")
+            perms.append("poisson.core/poisson.core.webauthn.authenticator_attachment")
         return perms
 
     class Meta:
@@ -95,3 +102,20 @@ class CoreSettingValue(serializers.ModelSerializer):
 
         return data
 
+
+class OTPDeviceSerializer(serializers.ModelSerializer):
+    icon  = serializers.SerializerMethodField()
+    type  = serializers.SerializerMethodField()
+
+    def get_icon(self, obj):
+        if isinstance(obj, WebauthnDevice):
+            return obj.icon
+        return None
+
+    def get_type(self, obj):
+        return obj.model_label()
+
+    class Meta:
+        # This is not true, this serializer is for all `Device`s, but since Device is abstract this is a workaround abusing ducktyping
+        model = TOTPDevice
+        fields = ["persistent_id", "name", "icon", "type"]

@@ -143,9 +143,11 @@
 </style>
 
 <button use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex">
-    {#if icon !== null && !loading}
-        <Icon height={iconSize} width={iconSize} description={label} icon={icon} color={icon_color}/>
-    {/if}
+    <slot name="icon">
+        {#if icon !== null && !loading}
+            <Icon height={iconSize} width={iconSize} description={label} icon={icon} color={icon_color}/>
+        {/if}
+    </slot>
     {#if loading}
         <div style="margin: 0 2px">
             <Loader/>

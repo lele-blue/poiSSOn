@@ -4,7 +4,8 @@
     import {csrftoken} from "../snippets/csrf";
     import {do_redirect} from "../snippets/do_redirect.ts";
     import {check_redirect} from "../snippets/check_redirect.ts";
-    import {goto} from "@roxi/routify";
+    import {currentUser} from "../state/currentUser.ts";
+    import {goto, params} from "@roxi/routify";
     import {createEventDispatcher} from "svelte";
     let username = "";
     let password = "";
@@ -15,7 +16,7 @@
 
     let already_logged_in = false;
 
-    const next = new URLSearchParams(document.location.search).get("next");
+    const next = new URLSearchParams(document.location.search).get("next") ?? $params.next;
 
     function login(event) {
         let body = new FormData();
@@ -31,6 +32,7 @@
                 }
             });
             if (res.status === 200) {
+                $currentUser = await res.json()
                 if (!redir_on_logged_in) {
                     let blockWaitPrResolve: () => void;
                     const blockWaitPr = new Promise<void>(resolve => {blockWaitPrResolve = resolve});
@@ -71,13 +73,13 @@
 
 {#if !already_logged_in}
     <h1>Log in to your account</h1>
-    <Input on:submitted={login} bind:value={username} icon="user" placeholder="Nutzername"/>
-    <Input on:submitted={login} bind:value={password} icon="key" password={true} placeholder="Passwort"/>
+    <Input on:submitted={login} bind:value={username} icon="user" placeholder="Username"/>
+    <Input on:submitted={login} bind:value={password} icon="key" password={true} placeholder="Password"/>
     <div style="width: 80%">
         <LoadButton on:clicked={login} icon="arrow-right">Login</LoadButton>
     </div>
 {:else if redir_on_logged_in}
-    <h1>Bereits eingeloggt</h1>
+    <h1>Already logged in</h1>
     <div style="width: 80%">
         <LoadButton on:clicked={() => $goto("/auth/go/dash")} icon="arrow-right">Weiter</LoadButton>
     </div>

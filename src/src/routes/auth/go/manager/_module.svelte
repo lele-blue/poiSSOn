@@ -1,12 +1,13 @@
-
 <script>
 import Icon from "@components/Icon.svelte"
 import SidebarItem from "@components/SidebarItem.svelte"
 import Button from "@components/Button.svelte"
 import Loader from "@components/Loader.svelte"
+import TopBar from "@components/TopBar.svelte"
 import Input from "@components/Input.svelte"
 import {fly, slide} from "svelte/transition"
-import {goto} from "@roxi/routify"
+import {onDestroy} from "svelte"
+import {goto, url} from "@roxi/routify"
 import {check_login} from "@/snippets/check_login.ts"
 import Dialogs from "@components/Dialogs.svelte"
 
@@ -15,13 +16,14 @@ let manage_pages = import("../../../../data/settings.json")
 import {currentUser} from "@/state/currentUser.ts"
 
 
-export let back = null;
-export let settings = true;
-
 let search_term = "";
 
 
 check_login()
+
+let sidebar_active = false;
+
+onDestroy(url.subscribe(() => sidebar_active = false))
 
 
 </script>
@@ -62,48 +64,47 @@ check_login()
         border-radius: 3px;
     }
 
-    .topbar {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        height: 40px;
-        width: 100vw;
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(8px);
-        position: fixed;
-        top: 0;
-        box-shadow: 1px 1px 5px 2px #00000045;
-        font-family: sans-serif;
-        z-index: 10;
-    }
-
     aside {
         margin-top: 40px;
         height: calc(100% - 40px - 10px);
     }
 
+    .expand-sidebar {
+        display: none;
+    }
+
+    @media screen and (max-width: 700px) {
+        .manager_root {
+            grid-template-columns: 1fr;
+        }
+
+        aside {
+            width: calc(100vw - 10px);
+            transform: translateX(-100vw);
+            position: absolute;
+            transition: .3s ease transform;
+            z-index: 20;
+        }
+
+        aside.active {
+            transform: translateX(0); 
+        }
+
+        .expand-sidebar {
+            display: block;
+        }
+    }
+
 </style>
 
 <Dialogs/>
-{#if $currentUser}
-    <div in:fly={{y: -40}} class="topbar">
-        {#if back}
-            <div in:slide>
-                <Button dialogButton={true} on:click={() => $goto(back)} icon="chevron-left">Back</Button>
-            </div>
-        {/if}
-        <Icon icon="account"/>
-        <span>Logged in as {$currentUser.username}</span>
-        <div style="flex-grow: 1"/>
-        {#if settings}
-            <div in:slide>
-                <Button on:click={$goto("/auth/go/settings")} icon="cog" dialogButton={true}>Settings</Button>
-            </div>
-        {/if}
-        </div>
-{/if}
+<TopBar>
+    <div slot="before" class="expand-sidebar">
+        <Button on:click={() => sidebar_active = !sidebar_active} icon="menu" dialogButton={true}/>
+    </div>
+</TopBar>
 <div class="manager_root">
-    <aside class="highlight_box">
+    <aside class="highlight_box" class:active={sidebar_active}>
         <Input icon="search" placeholder="Search Settings" full_width={true} bind:value={search_term}/>
         {#await manage_pages}
             <Loader/>

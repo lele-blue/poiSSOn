@@ -9,4 +9,10 @@
     <h1>Settings</h1>
 
     <Button on:click={() => $goto("/auth/go/settings/2fa")} icon="key">Two Factor Authentication</Button>
+    {#if $currentUser?.permissions.includes("poisson.manage")}
+        <Button on:click={() => $goto("/auth/go/manager")} icon="tune">Configure this PoiSSOn instance</Button>
+    {/if}
+    {#if $currentUser?.permissions.includes("poisson.admin")}
+        <Button on:click={() => location.href="/auth/go/admin"} icon="admin">Admin</Button>
+    {/if}
 </DefaultFrame>

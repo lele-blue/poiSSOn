@@ -24,7 +24,15 @@
 {#each devices as device}
     <div style="--material-accent-color: #5d267f;display: flex; align-items: center;justify-content: space-between;width: 100%;">
         <slot name="main" {device}>
-        <Button icon={get_icon(device.name)} on:click={ev => dispatch("selected", device)} dialogButton={true}>{device.name}</Button>
+        <Button icon={get_icon(device.name)} on:click={ev => dispatch("selected", device)} dialogButton={true}>{device.name}
+                <div slot="icon">
+                    {#if device.icon}
+                        <img alt="Icon of the authenticator" height="24px" width="24px" src={device.icon} />
+                    {:else}
+                        <Icon icon={get_icon(device.name)}/>
+                    {/if}
+                </div>
+        </Button>
         </slot>
             <slot name="buttons" {device}>
             <Icon icon="arrow-right" color="var(--material-accent-color)"/>

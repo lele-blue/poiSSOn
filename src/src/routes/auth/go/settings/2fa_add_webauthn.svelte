@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import DefaultFrame from "../../../../components/DefaultFrame.svelte";
     import Loader from "../../../../components/Loader.svelte";
     import LoadButton from "../../../../components/LoadButton.svelte";
@@ -12,7 +12,9 @@
     import {handle_400} from "../../../../snippets/handle_2fa_400.ts";
     import {slide} from "svelte/transition";
     import {goto} from "@roxi/routify";
-    import {get_icon} from "../../../../components/OTPDeviceList.svelte"
+    import {get_icon} from "@components/OTPDeviceList.svelte"
+    import {post} from "@/snippets/fetch"
+    import {onMount} from "svelte";
 
     check_login();
 
@@ -29,33 +31,46 @@
         return URL.createObjectURL(await resp.blob());
     }
 
-    let name = "";
-    let token = "";
-    let name_error = null;
-    let token_error = null;
     let error;
+    let loading = true;
 
-    async function submit() {
+    async function prepare() {
+        const data = await post("/auth/api/2fa/manage", {step: "challenge", type:"otp_webauthn.webauthndevice"});
+        try{
+            const creds = await navigator.credentials.create(
+                {publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(data)}
+            )
+            await submit(creds.toJSON())
+        }
+        catch (e) {
+            loading = false;
+            error = `Browser refused to register key<br>`
+            if (e.name !== "NotAllowedError") error += e;
+            throw e;
+        }
+    }
+
+    async function submit(credentials) {
         error = null;
-        if (!name.length) name_error = "Please enter a name";
-        else name_error = null;
-        if (token.length < 6) token_error = "Please Enter the Token";
-        else token_error = null;
 
-        if (name_error || token_error) return;
         const resp = await fetch("/auth/api/2fa/manage", {
 						method: "POST",
 						headers: {
 								"Content-Type": "application/json",
 								"X-CSRFToken": csrftoken(),
 						},
-            body: JSON.stringify({key, token, name: "@autofill", type:"otp_webauthn.public-key"}),
+            body: JSON.stringify({step: "submit", type:"otp_webauthn.webauthndevice", data: credentials}),
         });
-        if (resp.status !== 200) error = handle_400(await resp.json(), $goto);
+        if (resp.status !== 200) {
+            error = handle_400(await resp.json(), $goto);
+            loading = false
+        }
         else {
             $goto("/auth/go/settings/2fa");
         }
     }
+
+    onMount(prepare);
 
 </script>
 
@@ -70,13 +85,15 @@
 
 <DefaultFrame back="/auth/go/settings/2fa_choose" settings={false}>
     <h1>Add new Key</h1>
-    <Loader/>
+    {#if loading}
+        <Loader/>
+    {/if}
     {#if error}
         <div transition:slide class="error_box">
             <Icon icon="alert" color="red"/>
-            <p>{error}</p>
+            <p>{@html error}</p>
         </div>
-        <LoadButton icon="reload" on:clicked={e => e.detail.waitUntil(submit())}>Create Device</LoadButton>
+        <LoadButton icon="reload" on:clicked={e => e.detail.waitUntil(prepare())}>Retry</LoadButton>
     {/if}
 
 

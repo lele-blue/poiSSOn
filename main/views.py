@@ -1,4 +1,5 @@
 from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED, UNPROCESSABLE_ENTITY
+from rest_framework.exceptions import APIException
 from rest_framework.renderers import JSONRenderer
 import re
 import base64
@@ -34,9 +35,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import ApplicationPassword, CoreSetting, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
-from main.permissions import HasManagePermission, HasServicePermission, IsMasterSession
-from main.serializers import CoreSettingValue, ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
-from main.session_tree import check_is_2fa_authenticated_tree_aware
+from main.permissions import HasCoreSettingPermission, HasServicePermission, Is2FactorAuthenticated, IsMasterSession
+from main.serializers import CoreSettingValue, OTPDeviceSerializer, ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
+from main.session_tree import check_is_2fa_authenticated_tree_aware, logout_tree_aware
+from otp_webauthn.models import WebauthnDevice
 
 
 @ensure_csrf_cookie
@@ -48,14 +50,14 @@ def static_resolver(request, url):
     return HttpResponseRedirect(static(url))
 
 
-@ratelimit(key='ip', rate='10/5m')
-def ajax_login(request):
-    if request.method == "POST":
+class AjaxLogin(APIView):
+    @method_decorator(ratelimit(key='ip', rate='10/5m'))
+    def post(self, request):
         user = authenticate(username=request.POST.get("username"), password=request.POST.get("password"))
         if user:
             login(request, user)
             request.session["is_master_session"] = True
-            return HttpResponse(status=200)
+            return Response(UserPermissionStateSerializer(user).data)
         else:
             raise PermissionDenied()
 
@@ -216,6 +218,10 @@ class TwoFactorStatus(APIView):
         return Response(status=OK, data=resp)
 
 
+class PoiSSOnAPIException(APIException):
+    status_code = 400
+
+
 class TwoFactorVerification(APIView):
     permission_classes = [IsMasterSession]
 
@@ -224,12 +230,12 @@ class TwoFactorVerification(APIView):
             return HttpResponse("Can't verify 2FA when not logged in", status=UNAUTHORIZED)
         if request.user.is_verified():
             return HttpResponse('null', status=OK)
-        return Response(data=list(map(lambda device: { 'name': device.name, 'id': device.persistent_id }, devices_for_user(request.user))))
+        return Response(OTPDeviceSerializer(devices_for_user(request.user), many=True).data)
     def post(self, request):
         if not request.user.is_authenticated:
             return HttpResponse("Can't verify 2FA when not logged in", status=UNAUTHORIZED)
         if request.user.is_verified():
-            return HttpResponse(status=OK)
+            return Response({"action": "continue"})
         id = request.data.get('id')
         if id is None:
             return HttpResponse("ID of device token is needed for verification", status=UNPROCESSABLE_ENTITY)
@@ -237,17 +243,54 @@ class TwoFactorVerification(APIView):
         device = next(filter(lambda device: device.persistent_id == id, devices_for_user(request.user)), None)
         if device is None:
             return HttpResponse("2FA with this ID could not be found", status=NOT_FOUND)
+
+        match request.data.get("step"):
+            case "challenge":
+                return self.challenge(request, device)
+            case "submit":
+                return self.submit(request, device)
+            case _:
+                raise APIException("Unknown Step")
+
+    def challenge(self, request, device):
+        match device.model_label():
+            case "otp_totp.totpdevice":
+                raise APIException("TOTP does not support challenge-response")
+            case "otp_webauthn.webauthndevice":
+                return self.challenge_webauthn(device)
+
+    def challenge_webauthn(request, device: WebauthnDevice):
+        allowed, error = device.generate_is_allowed()
+        if not allowed:
+            raise APIException(error)
+
+        authentication_data = device.generate_challenge()
+        return HttpResponse(authentication_data, content_type="application/json")
+
+
+    def submit(self, request, device):
+        match device.model_label():
+            case "otp_totp.totpdevice":
+                return self.submit_generic(request, device)
+            case "otp_webauthn.webauthndevice":
+                return self.submit_generic(request, device)
+
+        raise PoiSSOnAPIException("Unkown Device type")
+
+
+    def submit_generic(self, request, device):
         token = request.data.get('token')
         if token is None:
-            return HttpResponse("2FA token is needed for verification", status=UNPROCESSABLE_ENTITY)
+            raise PoiSSOnAPIException("2FA token is needed for verification")
 
-        verification_device = verify_token(request.user, id, token)
+        verification_device = verify_token(request.user, device.persistent_id, token)
         if verification_device is None:
-            return HttpResponse("Could not verify 2FA", status=FORBIDDEN)
+            raise PoiSSOnAPIException("Could not verify 2FA")
 
         django_otp.login(request, device)
 
-        return HttpResponse(status=OK)
+        return Response({"action": "continue"})
+
 
 def twoFactorPermissionCheck(request):
         if not request.user.is_authenticated:
@@ -259,11 +302,41 @@ def twoFactorPermissionCheck(request):
 class TwoFactorManagement(APIView):
     permission_classes = [IsMasterSession]
 
+    def add_webauthn_device(self, request):
+        match request.data["step"]:
+            case "challenge":
+                data = WebauthnDevice.generate_registration(request.user, request.session)
+                return HttpResponse(data, content_type="application/json")
+            case "submit":
+                device = WebauthnDevice.create_device(request.data["data"], request.user, request.session)
+                if type(device) == dict:
+                    return Response(device, status=status.HTTP_406_NOT_ACCEPTABLE)
+                return Response({"name": device.name, "id": device.id})
+
+
+    def add_totp_device(self, request):
+        token = request.data.get('token')
+        if token is None:
+            return Response(data={ 'action': 'fail', 'reason': 'Cannot create 2FA without a Token' }, status=UNPROCESSABLE_ENTITY)
+        device = otp_totp.TOTPDevice(key = request.data.get('key'))
+        device.user = request.user
+        device.name = request.data.get('name') or 'Unnamed Device'
+        device.confirmed = False
+        device.save()
+        if not device.verify_token(token):
+            device.delete()
+            return Response(data={ 'action': 'fail', 'reason': 'Bad Token' }, status=BAD_REQUEST)
+        device.confirmed = True
+        device.save()
+        django_otp.login(request, device)
+        return Response(data={ 'name': device.name, 'id': device.persistent_id }, status=OK)
+
     def get(self, request: HttpRequest):
         auth_error = twoFactorPermissionCheck(request)
-        if not auth_error is None:
+        if auth_error is not None:
             return auth_error
-        return Response(data=list(map(lambda device: { 'name': device.name, 'id': device.persistent_id }, devices_for_user(request.user))))
+        return Response(OTPDeviceSerializer(devices_for_user(request.user), many=True).data)
+
     def post(self, request):
         auth_error = twoFactorPermissionCheck(request)
         if not auth_error is None:
@@ -273,22 +346,11 @@ class TwoFactorManagement(APIView):
             case None:
                 return Response(data={ 'action': 'fail', 'reason': 'Cannot create 2FA without a 2FA-Type' }, status=UNPROCESSABLE_ENTITY)
             case 'otp_totp.totpdevice':
-                token = request.data.get('token')
-                if token is None:
-                    return Response(data={ 'action': 'fail', 'reason': 'Cannot create 2FA without a Token' }, status=UNPROCESSABLE_ENTITY)
-                device = otp_totp.TOTPDevice(key = request.data.get('key'))
-                device.user = request.user
-                device.name = request.data.get('name') or 'Unnamed Device'
-                device.confirmed = False
-                device.save()
-                if not device.verify_token(token):
-                    device.delete()
-                    return Response(data={ 'action': 'fail', 'reason': 'Bad Token' }, status=BAD_REQUEST)
-                device.confirmed = True
-                device.save()
-                django_otp.login(request, device)
-                return Response(data={ 'name': device.name, 'id': device.persistent_id }, status=OK)
+                return self.add_totp_device(request)
+            case 'otp_webauthn.webauthndevice':
+                return self.add_webauthn_device(request)
         return Response(data={ 'action': 'fail', 'reason': 'Unknown 2FA Type ' + request.data.get('type') }, status=UNPROCESSABLE_ENTITY)
+
     def delete(self, request):
         auth_error = twoFactorPermissionCheck(request)
         if not auth_error is None:
@@ -301,6 +363,7 @@ class TwoFactorManagement(APIView):
                 device.delete()
                 return Response(status=200)
         return Response(data={'action': 'fail', 'reason': "No device with id " + id}, status=NOT_FOUND)
+
     def patch(self, request):
         auth_error = twoFactorPermissionCheck(request)
         if not auth_error is None:
@@ -662,7 +725,7 @@ class ViewServiceConfiguration(APIView):
                 if type(val) == str:
                     val = val.replace("<", "&gt;")
                     val = val.replace(">", "&lt;")
-                    line = line.replace(f"%%{key}%%", val)
+                    line = line.replace(f"%%{key}%%", val.replace("%", "&#37;"))
             return f"{line}<br/>"
 
         current_iter_item = None
@@ -737,7 +800,7 @@ class CheckApplicationPassword(APIView):
 
 
 class ManagerCoreSetting(APIView):
-    permission_classes = [HasManagePermission]
+    permission_classes = [HasCoreSettingPermission, Is2FactorAuthenticated, IsMasterSession]
     manage_permission = "poisson.manage"
 
     def get(self, request, setting):
@@ -752,3 +815,11 @@ class ManagerCoreSetting(APIView):
         setting_serializer.update(settingObj, request.data)
 
         return Response(CoreSettingValue(settingObj).data)
+
+
+class LogOut(APIView):
+    permission_classes = [IsMasterSession]
+
+    def post(self, request):
+        logout_tree_aware(request)
+        return Response({"action": "continue"})

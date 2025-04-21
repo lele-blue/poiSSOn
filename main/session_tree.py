@@ -1,4 +1,5 @@
 from django.contrib.sessions.backends.db import SessionStore
+from django.db import transaction
 from django_otp.middleware import OTPMiddleware as OTPInternalMiddleware
 from typing import Optional
 from django.contrib.auth import logout
@@ -10,16 +11,16 @@ from main.models import SessionTreeEdge
 
 # helper that returns true if the current session is the master
 def is_master_session(request):
-        # Use the cached version if available
-        cached: Optional[bool] = request.session.get("is_master_session")
-        if cached is None:
-            # this session is probably older than the version that introduced session trees, so log out to migrate
-            if not SessionTreeEdge.objects.filter(Q(parent__session_key=request.session.session_key) | Q(child__session_key=request.session.session_key)).exists():
-                logout(request)
-                return False
-            # We are master if we are not a child
-            return not SessionTreeEdge.objects.filter(child=request.session.session_key).exists()
-        return cached
+    # Use the cached version if available
+    cached: Optional[bool] = request.session.get("is_master_session")
+    if cached is None:
+        # this session is probably older than the version that introduced session trees, so log out to migrate
+        if not SessionTreeEdge.objects.filter(Q(parent__session_key=request.session.session_key) | Q(child__session_key=request.session.session_key)).exists():
+            logout(request)
+            return False
+        # We are master if we are not a child
+        return not SessionTreeEdge.objects.filter(child=request.session.session_key).exists()
+    return cached
 
 
 # this essestially does request.user.is_verified(),
@@ -53,3 +54,13 @@ def check_is_2fa_authenticated_tree_aware(request):
             device = None
 
         return device is not None
+
+
+def logout_tree_aware(request):
+    with transaction.atomic():
+        children = SessionTreeEdge.objects.filter(parent=request.session.session_key).values_list("child", flat=True)
+        # invalidate each child of the parent
+        for child in children:
+            child.delete()
+
+    logout(request)

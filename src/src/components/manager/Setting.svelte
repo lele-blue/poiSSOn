@@ -1,6 +1,9 @@
 <script>
+    import {slide} from "svelte/transition"
+
     import Button from "@components/Button.svelte"
     import Loader from "@components/Loader.svelte"
+    import Icon from "@components/Icon.svelte"
     import AlertBox from "@components/AlertBox.svelte"
 
     import {showDialog} from "@/state/dialogs"
@@ -11,6 +14,7 @@
     export let type_data;
     export let widget;
     export let widget_data;
+    export let warn_if;
 
 
     const setting_type_map = {
@@ -23,9 +27,12 @@
 
     let setting = null;
 
+    let value;
+
     $: {
         setting_type_map[type]().then(val => setting = new val(type_data));
     }
+
 </script>
 
 <style>
@@ -33,6 +40,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        max-width: 45vw;
     }
 
     .setting {
@@ -57,8 +65,15 @@
         {#await setting_widget_map[widget]()}
             <Loader/>
         {:then component}
-            <svelte:component this={component.default} {...widget_data} {setting}/>
+            <svelte:component bind:value this={component.default} {...widget_data} {setting}/>
         {/await}
     {/if}
 </div>
-
+{#if warn_if}
+    {#each warn_if.filter(warn => value && value.match(warn.match)) as {message}}
+        <div transition:slide class="setting" style="justify-content: left;">
+            <Icon icon="alert" color="orange"/>
+            {@html message}
+        </div>
+    {/each}
+{/if}

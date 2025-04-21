@@ -7,7 +7,7 @@
 
     let loading = true;
 
-    let value;
+    export let value;
     let last_saved_value;
     function load(setting) {
         setting.get().then(val => {

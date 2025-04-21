@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, SetApplicationPassword, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, ajax_login, login_check, UserGetOwnServices, GetNextCredential, \
+from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, SetApplicationPassword, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
     SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
 from main.oidc_provider_settings import wrap_authorize_post
 
@@ -30,7 +30,8 @@ urlpatterns = [
     path('auth/go/admin', admin.site.urls),
     path('auth/go/static/resolve/<path:url>', static_resolver),
     path('auth/go/unauthenticated', redirect_unauthenticated, name="redirect_unauth"),
-    path('auth/api/logon', ajax_login),
+    path('auth/api/logon', AjaxLogin.as_view()),
+    path('auth/api/logoff', LogOut.as_view()),
     path('auth/api/service/<str:name>/configuration', GetServiceConfigurationInfo.as_view()),
     path('auth/api/services/query', GetServiceInfo.as_view()),
     path('auth/api/services/redirect_check', CheckRedirect.as_view()),

@@ -1,4 +1,6 @@
 from django_ratelimit.core import is_ratelimited
+from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import BasePermission
 from rest_framework_api_key.permissions import BaseHasAPIKey
 
@@ -41,9 +43,24 @@ def check_user_has_manage_permission(user: User, permission: str):
     return False
 
 
-class HasManagePermission(BasePermission):
+class HasCoreSettingPermission(BasePermission):
     def has_permission(self, request, view):
         return check_user_has_manage_permission(request.user, view.manage_permission)
 
     def has_object_permission(self, request, view, obj: str):
         return check_user_has_manage_permission(request.user, f"poisson.core/{obj}")
+
+
+class Verify2FactorFirst(APIException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+    def __init__(self):
+        self.detail = {"action": "upgrade"}
+
+
+class Is2FactorAuthenticated(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user.is_verified():
+            raise Verify2FactorFirst()
+        return True
+

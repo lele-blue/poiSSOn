@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 
     'django_otp',
     'django_otp.plugins.otp_totp',
+    'otp_webauthn',
 ]
 
 MIDDLEWARE = [
@@ -186,3 +187,5 @@ OTP_WEBAUTHN_RP_NAME = OTP_TOTP_ISSUER
 OTP_WEBAUTHN_RP_ID = SITE_NAME
 
 OTP_TOTP_IMAGE = f"{SITE_URL}/favicon.ico"
+
+SESSION_COOKIE_NAME = "poisson_session"

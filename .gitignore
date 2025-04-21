@@ -5,3 +5,5 @@
 /main/static/build
 
 **/__pycache__/
+
+otp_webauthn/data/aaguids.json

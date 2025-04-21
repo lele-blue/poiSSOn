@@ -5,7 +5,10 @@ export async function do_fetch(url: string, options?: RequestInit) {
     const resp = await fetch(url, options);
     const json = await resp.json();
     if (resp.status >= 400 || resp.status < 500) {
-        handle_400(json, (url, parms) => location.href=`${url}?${new URLSearchParams(parms)}`);
+        const error = handle_400(json, (url, parms) => location.href = `${url}?${new URLSearchParams(parms)}`);
+        if (error) {
+            throw new Error(error)
+        }
     }
     return json;
 }
