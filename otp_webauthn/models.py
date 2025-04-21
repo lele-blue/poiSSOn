@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
 class WebauthnDevice(Device):
     id = models.UUIDField(default=uuid4, primary_key=True)
     use_count = models.PositiveIntegerField(default=0)
-    credentials = models.TextField()
     cred_id = models.TextField()
     publicKey = models.BinaryField()
     backed_up = models.BooleanField()
@@ -82,7 +81,8 @@ class WebauthnDevice(Device):
             verification_data = webauthn.verify_authentication_response(
                 credential=token,
                 credential_public_key=self.publicKey,
-                expected_challenge=self.current_challenge,
+                # copy the memory since the django postgres integration returns a memory view that can't be compared to a `bytes` object, causing verification to fail
+                expected_challenge=bytes(self.current_challenge),
                 expected_origin=settings.SITE_URL,
                 expected_rp_id=settings.OTP_WEBAUTHN_RP_ID,
                 require_user_verification=USER_VERIFICATION_SETTINGS_MAP[get_core_setting("poisson.core.webauthn.user_verification_requirement", self.user)] == UserVerificationRequirement.REQUIRED,
