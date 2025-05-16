@@ -15,14 +15,18 @@
     export let widget;
     export let widget_data;
     export let warn_if;
+    export let extra_data;
+    export let extended = false;
 
 
     const setting_type_map = {
         "poisson.core_setting": async () => (await import("@components/manager/coreSetting")).default,
+        "poisson.users": async () => (await import("@components/manager/users")).default,
     }
 
     const setting_widget_map = {
         "poisson.simple.choice": () => import("@components/manager/widgets/SimpleSelect.svelte"),
+        "poisson.table": () => import("@components/manager/widgets/Table.svelte"),
     }
 
     let setting = null;
@@ -30,7 +34,7 @@
     let value;
 
     $: {
-        setting_type_map[type]().then(val => setting = new val(type_data));
+        setting_type_map[type]().then(val => setting = new val(type_data, extra_data));
     }
 
 </script>
@@ -48,9 +52,14 @@
         align-items: center;
         justify-content: space-between;
     }
+
+    .setting.extended {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 </style>
 
-<div class="setting">
+<div class="setting" class:extended>
     <div class="setting-title">
         <label for="poisson-settings-element-{name.replaceAll(" ","")}">
             <h3>{name}</h3>

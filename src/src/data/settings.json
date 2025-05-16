@@ -147,7 +147,96 @@
       "name": "Users",
       "slug": "users",
       "icon": "account",
-      "pages": []
+      "pages": [
+        {
+          "name": "User Manager",
+          "header_text": "Manage your Users",
+          "slug": "manager",
+          "permissions": {
+            "permissions": ["poisson.users.manage"]
+          },
+          "content": [
+            {
+              "name": "Users",
+              "help_text": "",
+              "permissions": {
+                "permissions": ["poisson.users.manage"]
+              },
+              "type": "poisson.users",
+              "widget": "poisson.table",
+              "extended": true,
+              "widget_data": {
+                "paginate": {
+                  "per_page": 15
+                },
+                "no_data_text": "No User created yet.",
+                "columns": [
+                  {
+                    "text": "Username",
+                    "key": "username",
+                    "icon": "user",
+                    "can_sort": true,
+                    "bold": true
+                  },
+                  {
+                    "text": "Full Name",
+                    "key": "full_name",
+                    "icon": "user",
+                    "can_sort": true
+                  },
+                  {
+                    "text": "Email",
+                    "key": "email",
+                    "icon": "email",
+                    "can_sort": true,
+                    "warn_if": "warn_email"
+                  },
+                  {
+                    "text": "Actions",
+                    "icon": "cog",
+                    "column_role": "actions"
+                  }
+                ],
+                "sort_by": null,
+                "add_button": {
+                  "enable": true,
+                  "text": "Add User",
+                  "action": "url",
+                  "action_data": {
+                    "href": "/auth/go/manager/user/manager/new"
+                  }
+                },
+                "actions": [
+                  {
+                    "button": {
+                      "icon": "delete",
+                      "destroy": true
+                    },
+                    "condition": "can_delete",
+                    "text": "",
+                    "action": "delete"
+                  }
+                ]
+              },
+              "type_data": {
+
+              },
+              "warn_if": [
+
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Groups",
+          "header_text": "Manage your Groups",
+          "slug": "groups",
+          "permissions": {
+            "permissions": ["poisson.users.groups"]
+          },
+          "content": []
+        }
+      ]
     }
   ]
 }

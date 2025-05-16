@@ -16,14 +16,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, SetApplicationPassword, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
+from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
     SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
 from main.oidc_provider_settings import wrap_authorize_post
 
 from oidc_provider.views import AuthorizeView
+from rest_framework.routers import SimpleRouter
 
 # Add permission check to post
 wrap_authorize_post()
+
+router = SimpleRouter(trailing_slash=False)
+router.register(r'auth/api/manager/users', UserViewSet, basename='user')
 
 
 urlpatterns = [
@@ -58,6 +62,8 @@ urlpatterns = [
     path('auth/api/application_password/<str:service_name>', SetApplicationPassword.as_view()),
 
     path('auth/api/manager/core_setting/<str:setting>', ManagerCoreSetting.as_view()),
+
+    *router.urls,
 
     path('auth/openid/', include('oidc_provider.urls', namespace='oidc_provider')),
     path('auth/<path:url>', main_view),

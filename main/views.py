@@ -1,6 +1,9 @@
 from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 from rest_framework.exceptions import APIException
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.renderers import JSONRenderer
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.pagination import LimitOffsetPagination
 import re
 import base64
 from django.conf import settings
@@ -35,8 +38,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import ApplicationPassword, CoreSetting, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
-from main.permissions import HasCoreSettingPermission, HasServicePermission, Is2FactorAuthenticated, IsMasterSession
-from main.serializers import CoreSettingValue, OTPDeviceSerializer, ServiceConfigurationStepSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
+from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, Is2FactorAuthenticated, IsMasterSession
+from main.serializers import CoreSettingValue, FullUserSerializer, OTPDeviceSerializer, ServiceConfigurationStepSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
 from main.session_tree import check_is_2fa_authenticated_tree_aware, logout_tree_aware
 from otp_webauthn.models import WebauthnDevice
 
@@ -823,3 +826,37 @@ class LogOut(APIView):
     def post(self, request):
         logout_tree_aware(request)
         return Response({"action": "continue"})
+
+
+class UserPagination(LimitOffsetPagination):
+    default_limit = 3
+    max_limit = 25
+
+
+class UserViewSet(ModelViewSet):
+    permission_classes = [IsMasterSession, HasUserManagePermission]
+    pagination_class = UserPagination
+
+    def get_queryset(self):
+        order_by = self.request.GET.get("sort", "")
+        if order_by == "full_name":
+            order_by = ["first_name", "last_name"]
+        else:
+            order_by = [order_by]
+        if self.request.GET.get("dir") == "desc":
+            order_by = list(map(lambda val: "-" + val, order_by))
+        qs = User.objects.all()
+        if order_by[0]:
+            print(*order_by)
+            qs = qs.order_by(*order_by)
+        return qs
+
+    def retrieve(self, request):
+        self.kwargs["method"] = "retrieve"
+        return super().retrieve(request)
+
+    def get_serializer_class(self):
+        if self.kwargs.get("method") == "retrieve" or self.request.method not in SAFE_METHODS:
+            return FullUserSerializer
+        return SmallUserSerializer
+

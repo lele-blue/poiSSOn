@@ -22,20 +22,23 @@
     function click() {
         if (loading || disabled) return;
         dispatch('clicked', {waitUntil: s => {
-            loading = true;
-            s.then(() => {
-                loading = false
-            }).catch(e => {
-                loading = false;
-                icon = "alert";
-                icon_color = 'red';
-                setTimeout(() => {
-                    //#!debug
-                    throw e;
-                }, 10)
-            }
-            )
-        }})
+            return new Promise(resolve => {
+                loading = true;
+                s.then(() => {
+                    loading = false
+                    resolve();
+                }).catch(e => {
+                    loading = false;
+                    icon = "alert";
+                    icon_color = 'red';
+                    setTimeout(() => {
+                        //#!debug
+                        throw e;
+                    }, 10);
+                    resolve();
+                });
+            })
+        }});
     }
 </script>
 

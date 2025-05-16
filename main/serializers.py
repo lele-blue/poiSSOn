@@ -86,7 +86,23 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "permissions"]
+        fields = ["username", "permissions", "uid"]
+
+
+class SmallUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    def get_full_name(self, obj: User):
+        return obj.get_full_name()
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "full_name", "uid"]
+
+
+class FullUserSerializer(SmallUserSerializer):
+    class Meta(SmallUserSerializer.Meta):
+        fields = [*SmallUserSerializer.Meta.fields, "first_name", "last_name"]
 
 
 class CoreSettingValue(serializers.ModelSerializer):

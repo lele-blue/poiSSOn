@@ -7,13 +7,13 @@
     import {params} from "@roxi/routify"
     const settingsPr = import("@/data/settings.json");
 
-    export let page;
-    let section = $params["section"];
+    $: page = ($params["data"] ?? [])[0];
+    $: section = $params["section"];
 
     let settings = null;
     let error = null;
 
-    settingsPr.then(json => {
+    function load(json) {
         let sectionData;
         if ((sectionData = json.categories.filter(cat => cat.slug === section)[0]) == undefined) {
             error = `${section} not found`;
@@ -24,8 +24,18 @@
             error = `${page} not found`;
             return;
         }
+        if ($params["data"].length - 1 > (pageData.extra_data_depth ?? 0)) {
+            error = `${page} cannot work with this data amount`;
+            return
+        }
         settings = pageData;
-    })
+    }
+
+    $: {
+        settingsPr.then(load);
+        // use page and section somewhere so the reactive block is run on change
+        void (page, section);
+    }
 
 </script>
 
@@ -38,8 +48,8 @@
 {:else}
     <h1>{settings.name}</h1>
     <p>{settings.header_text}</p>
-    {#each settings.content as content}
-        <Setting {...content}/>
+    {#each settings.content as content (`${section}/${page}/${content.name}}`)}
+        <Setting {...content} extra_data={$params.data?.slice(1)}/>
     {:else}
         <p>Missing permissions to view/edit settings</p>
     {/each}

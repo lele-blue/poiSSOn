@@ -51,6 +51,11 @@ class HasCoreSettingPermission(BasePermission):
         return check_user_has_manage_permission(request.user, f"poisson.core/{obj}")
 
 
+class HasUserManagePermission(BasePermission):
+    def has_permission(self, request, view):
+        return check_user_has_manage_permission(request.user, "poisson.user.manage")
+
+
 class Verify2FactorFirst(APIException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
