@@ -66,7 +66,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'main.middleware.admin_needs_twofa'
+    'main.middleware.admin_needs_twofa',
+    'main.middleware.oobe',
 ]
 
 ROOT_URLCONF = 'domainAuth.urls'

@@ -2,7 +2,7 @@
     import Loader from "@components/Loader.svelte"
     import LoadButton from "@components/LoadButton.svelte"
     import Icon from "@components/Icon.svelte"
-    import {goto} from "@roxi/routify"
+    import {goto, url} from "@roxi/routify"
     import { flip } from 'svelte/animate';
     import { slide } from 'svelte/transition';
 
@@ -34,10 +34,26 @@
     };
     $: load(setting);
 
+    function process_goto(path, params, elem, func) {
+        let params_entries = Object.entries({...params});
+        for (let i = 0; i<params_entries.length;i++) {
+            if (Array.isArray(params_entries[i][1])) {
+                for (let u = 0; u<params_entries[i][1].length;u++) {
+                    let match;
+                    if (match = params_entries[i][1][u].match(/\$\{(.+)\}/)) {
+                        // copy the array so the result is not written back (reference shenanigans)
+                        params_entries[i][1] = [...params_entries[i][1]];
+                        params_entries[i][1][u] = setting[match[1]](elem)
+                    }
+                }
+            }
+        }
+        return(func ?? $goto)(path, Object.fromEntries(params_entries));
+    }
+
     function add() {
         if (add_button.action === "url") {
-            console.log(add_button.action_data.href);
-            $goto("/auth/go/manager/users/manager");
+            process_goto(add_button.action_data.path, add_button.action_data.params, null);
         }
     }
 
@@ -90,82 +106,96 @@
         width: 100%;
         gap: 5px;
     }
+    .table_wrapper {
+        max-width: calc(100vw - 40px);
+        overflow-x: auto;
+    }
 
 </style>
 
-<table>
-    <thead>
-        <tr>
-        {#each columns as {text, icon, can_sort, key}}
-            <th scope="col">
-                <div style="white-space: nowrap;">
-                    {#if icon}
-                        <Icon {icon}/>
-                    {/if}
-                    {text}
-                    {#if can_sort}
-                        <LoadButton icon={sort_by === key?(sort_dir==="asc"?"sort-ascending":"sort-descending"):"sort"} dialogButton={true} on:clicked={event => {event.detail.waitUntil(refetch(key))}}/>
-                    {/if}
-                </div>
-            </th>
-        {/each}
-        </tr>
-    </thead>
-    {#if value}
-        <tbody>
-            {#each value as data (data[uid_key ?? Math.random()])}
-                <tr
-                    animate:flip={{duration: 100}}
-                    transition:slide
-                >
-                    {#each columns as {key, column_role, warn_if, bold}}
-                        {#if column_role == "actions"}
-                            <td>
-                                {#each actions as {button, action, text, condition}}
-                                    {#await (condition?setting[condition](data):Promise.resolve(true))}
-                                        <Loader/>
-                                    {:then fulfilled}
-                                        <LoadButton {...button ?? {}} disabled={!fulfilled} on:clicked={event => event.detail.waitUntil(setting[action](data))}>{text}</LoadButton>
-                                    {/await}
-                                {/each}
-                            </td>
-                        {:else}
-                            <td>
-                                <div class="data">
-                                    <span class:bold>
-                                        {data[key]}
-                                    </span>
-                                    {#if warn_if}
-                                        {#await setting[warn_if](data)}
-                                            <div/>
-                                        {:then warning}
-                                            {#if warning}
-                                                <div class="warning">
-                                                    <Icon icon="alert" color="orange"/>
-                                                    {@html warning}
-                                                </div>
-                                            {/if}
+<div class="table_wrapper">
+    <table>
+        <thead>
+            <tr>
+                {#each columns as {text, icon, can_sort, key}}
+                    <th scope="col">
+                        <div style="white-space: nowrap;">
+                            {#if icon}
+                                <Icon {icon}/>
+                            {/if}
+                            {text}
+                            {#if can_sort}
+                                <LoadButton icon={sort_by === key?(sort_dir==="asc"?"sort-ascending":"sort-descending"):"sort"} dialogButton={true} on:clicked={event => {event.detail.waitUntil(refetch(key))}}/>
+                            {/if}
+                        </div>
+                    </th>
+                {/each}
+            </tr>
+        </thead>
+        {#if value}
+            <tbody>
+                {#each value as data (data[uid_key ?? Math.random()])}
+                    <tr
+                        >
+                        {#each columns as {key, column_role, warn_if, bold, link}}
+                            {#if column_role == "actions"}
+                                <td>
+                                    {#each actions as {button, action, text, condition}}
+                                        {#await (condition?setting[condition](data):Promise.resolve(true))}
+                                            <Loader/>
+                                        {:then fulfilled}
+                                            <LoadButton {...button ?? {}} disabled={!fulfilled} on:clicked={event => event.detail.waitUntil(setting[action](data))}>{text}</LoadButton>
                                         {/await}
-                                    {/if}
-                                </div>
-                            </td>
-                        {/if}
-                    {/each}
-                </tr>
-            {:else}
-                <tr>
-                    <td colspan={columns.length}>{no_data_text}</td>
-                </tr>
-            {/each}
-        </tbody>
-    {/if}
-</table>
+                                    {/each}
+                                </td>
+                            {:else}
+                                <td>
+                                    <div class="data">
+                                        <span class:bold>
+                                            {#if link}
+                                                <a href={process_goto(link.path, link.params, data, $url)}>
+                                                    {data[key]}
+                                                </a>
+                                            {:else}
+                                                {data[key]}
+                                            {/if}
+                                        </span>
+                                        {#if warn_if}
+                                            {#await setting[warn_if](data)}
+                                                <div/>
+                                            {:then warning}
+                                                {#if warning}
+                                                    <div class="warning">
+                                                        <Icon icon="alert" color="orange"/>
+                                                        {@html warning}
+                                                    </div>
+                                                {/if}
+                                            {/await}
+                                        {/if}
+                                                </div>
+                                </td>
+                            {/if}
+                        {/each}
+                    </tr>
+        {:else}
+            <tr>
+                <td colspan={columns.length}>{no_data_text}</td>
+            </tr>
+                {/each}
+            </tbody>
+        {/if}
+    </table>
+</div>
 
 {#if count && value}
     <div class="pagination">
-        <LoadButton icon="chevron-left" dialogButton={true} disabled={!previous} on:clicked={event => event.detail.waitUntil(navigate(previous))}>Previous</LoadButton>
-            <span style="white-space: pre;">Showing {value.length} of {count}</span>
-        <LoadButton icon="chevron-right" dialogButton={true} disabled={!next} on:clicked={event => event.detail.waitUntil(navigate(next))}>Next</LoadButton>
+        {#if next || previous}
+            <LoadButton icon="chevron-left" dialogButton={true} disabled={!previous} on:clicked={event => event.detail.waitUntil(navigate(previous))}>Previous</LoadButton>
+        {/if}
+        <span style="white-space: pre;">Showing {value.length} of {count}</span>
+        {#if next || previous}
+            <LoadButton icon="chevron-right" reverse={true} dialogButton={true} disabled={!next} on:clicked={event => event.detail.waitUntil(navigate(next))}>Next</LoadButton>
+        {/if}
     </div>
 {/if}
 

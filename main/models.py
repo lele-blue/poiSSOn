@@ -1,4 +1,6 @@
+import datetime
 import random
+from secrets import token_urlsafe
 from uuid import uuid4
 from django.contrib.auth.models import AbstractUser
 from django.shortcuts import get_object_or_404
@@ -8,12 +10,12 @@ from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_api_key.models import AbstractAPIKey
 from django.contrib.sessions.models import Session
 
-from string import ascii_letters
+from string import ascii_letters, ascii_uppercase, digits
 
 # Create your models here.
 
 def generate_id(prefix):
-    return f"{prefix}_" + "".join(random.choices([*list(ascii_letters), *map(str, range(10))], k=64-len(prefix)-1))
+    return f"{prefix}_" + "".join(random.choices([*list(ascii_letters), *map(str, range(10))], k=24-len(prefix)-1))
 
 def generate_user_id():
     return generate_id("user")
@@ -177,3 +179,26 @@ class UserServiceConnection(models.Model):
 class CoreSetting(models.Model):
     key = models.CharField(primary_key=True, max_length=64)
     value = models.TextField()
+
+
+def gen_login_link():
+    return token_urlsafe(128)[:128]
+
+
+class LoginLink(models.Model):
+    token = models.CharField(max_length=128, default=gen_login_link)
+    purpose = models.CharField(choices=[("poisson.loginlink.purpose.password_reset", "Password Reset"), ("poisson.loginlink.purpose.service_login", "Service Login"), ("poisson.loginlink.purpose.session_login", "Generic Login tied to session")], max_length=48)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
+    parent_session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True, blank=True)
+    valid_until = models.DateTimeField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="login_links")
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_login_links")
+    created = models.DateTimeField(auto_created=True)
+
+    def is_valid(self):
+        return self.valid_until > datetime.datetime.now()
+
+    @staticmethod
+    def gen_short_link():
+        return "".join(random.choices(ascii_uppercase + digits, k=8))
+

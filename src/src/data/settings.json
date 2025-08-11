@@ -6,6 +6,30 @@
       "icon": "cog",
       "pages": [
         {
+          "name": "Your Instance",
+          "header_text": "",
+          "slug": "instance",
+          "permissions": {
+            "permissions": ["poison.instance.manage"]
+          },
+          "content": [
+            {
+              "name": "Instance Name",
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.input",
+              "help_text": "This is the name that will be shown in the tab Title of your PoiSSOn instance<br>Additionally, this name will be used to identify your users across federation",
+              "widget_data": {
+                "input": {
+                  "placeholder": "Instance Name"
+                }
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.instance_name"
+              }
+            }
+          ]
+        },
+        {
           "name": "Webauthn",
           "header_text": "Webauthn/Passkeys can be configured here",
           "slug": "webauthn",
@@ -140,6 +164,26 @@
               ]
             }
           ]
+        },
+        {
+          "name": "Theme",
+          "header_text": "Customize your PoiSSOn instance",
+          "slug": "theme",
+          "permissions": {
+            "permissions": ["poison.theme.manage"]
+          },
+          "content": [
+            {
+              "name": "Current Theme",
+              "type": "poisson.core_setting",
+              "widget": "poisson.custom.theme",
+              "widget_data": null,
+              "extended": true,
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.theme"
+              }
+            }
+          ]
         }
       ]
     },
@@ -150,10 +194,112 @@
       "pages": [
         {
           "name": "User Manager",
+          "extra_data_depth": 2,
           "header_text": "Manage your Users",
           "slug": "manager",
           "permissions": {
             "permissions": ["poisson.users.manage"]
+          },
+          "subpages": {
+            "*": {
+              "name": "${user_title}",
+              "header_text": "Edit User",
+              "subpages": {
+                "password_choose": {
+                  "name": "Set Password",
+                  "header_text":"",
+                  "content": [
+                    {
+                      "name": "",
+                      "extended": true,
+                      "type": "poisson.user",
+                      "widget": "poisson.choice.link",
+                      "widget_data": {
+                        "choices": [
+                          {
+                            "icon": "pencil",
+                            "text": "Set Password"
+                          },
+                          {
+                            "icon": "share",
+                            "text": "Create reset link",
+                            "call": "create_password_link"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              "content": [
+                {
+                  "name": null,
+                  "widget": "poisson.context_group",
+                  "type": "poisson.user",
+                  "content": [
+                    {
+                      "group_key": "uid",
+                      "name": "Actions",
+                      "extended": true,
+                      "widget": "poisson.choice.link"  ,
+                      "widget_data": {
+                        "choices": [
+                          {
+                            "icon": "key",
+                            "text": "Set Password",
+                            "path": "/auth/go/manager/[section]/[...data]",
+                            "params": {
+                              "section": "users",
+                              "data": ["manager", "$val", "password_choose"]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "group_key": "first_name",
+                      "name": "First Name",
+                      "widget": "poisson.simple.input",
+                      "widget_data": {
+                        "input": {
+                          "icon": "account",
+                          "placeholder": "First Name"
+                        }
+                      },
+                      "warn_if": [
+                      ]
+                    },
+                    {
+                      "group_key": "last_name",
+                      "name": "Last Name",
+                      "widget": "poisson.simple.input",
+                      "widget_data": {
+                        "input": {
+                          "icon": "account",
+                          "placeholder": "Last Name"
+                        }
+                      },
+                      "warn_if": [
+                      ]
+                    },
+                    {
+                      "group_key": "email",
+                      "name": "E-Mail",
+                      "widget": "poisson.simple.input",
+                      "widget_data": {
+                        "input": {
+                          "icon": "email",
+                          "placeholder": "E-Mail"
+                        }
+                      },
+                      "warn_if": [
+                        {"call": "warn_email_direct"}
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
           },
           "content": [
             {
@@ -167,16 +313,23 @@
               "extended": true,
               "widget_data": {
                 "paginate": {
-                  "per_page": 15
+                  "per_page": 25
                 },
-                "no_data_text": "No User created yet.",
+                "no_data_text": "No User created yet. (That is weird, since you are a user)",
                 "columns": [
                   {
                     "text": "Username",
                     "key": "username",
                     "icon": "user",
                     "can_sort": true,
-                    "bold": true
+                    "bold": true,
+                    "link": {
+                      "path": "/auth/go/manager/[section]/[...data]",
+                      "params": {
+                        "section": "users",
+                        "data": ["manager", "${get_uid}"]
+                      }
+                    }
                   },
                   {
                     "text": "Full Name",
@@ -203,7 +356,11 @@
                   "text": "Add User",
                   "action": "url",
                   "action_data": {
-                    "href": "/auth/go/manager/user/manager/new"
+                    "path": "/auth/go/manager/[section]/[...data]",
+                    "params": {
+                      "section": "users",
+                      "data": ["manager", "new"]
+                    }
                   }
                 },
                 "actions": [

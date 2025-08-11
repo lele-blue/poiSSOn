@@ -1,4 +1,5 @@
 from django.contrib.sessions.backends.db import SessionStore
+from django.contrib.sessions.models import Session
 from django.db import transaction
 from django_otp.middleware import OTPMiddleware as OTPInternalMiddleware
 from typing import Optional
@@ -61,6 +62,6 @@ def logout_tree_aware(request):
         children = SessionTreeEdge.objects.filter(parent=request.session.session_key).values_list("child", flat=True)
         # invalidate each child of the parent
         for child in children:
-            child.delete()
+            Session.objects.get(pk=child).delete()
 
     logout(request)

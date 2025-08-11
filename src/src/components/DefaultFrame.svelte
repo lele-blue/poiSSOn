@@ -10,7 +10,7 @@ export let settings = true;
 
 <style>
     .login_root {
-        background-image: url("/auth/go/static/resolve/login_bg.jpg");
+        background-image: var(--poisson-theme-bg);
         height: 100vh;
         width: 100vw;
         background-size: cover;

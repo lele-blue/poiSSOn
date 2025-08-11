@@ -16,6 +16,7 @@
     export let margin = false;
     export let noNewLine = false;
     export let smallLink = false;
+    export let reverse = false;
     let loading = false;
     export let label = null;
 
@@ -42,6 +43,6 @@
     }
 </script>
 
-<Button on:click={click} {disabled} {dialogButton} smallLink={smallLink} icon={icon} icon_color={icon_color} positive={positive} destroy={destroy} vertical={vertical} passive={passive} grow={grow} margin={margin} noNewLine={noNewLine} loading={loading} label={label}>
+<Button on:click={click} {disabled} {reverse} {dialogButton} smallLink={smallLink} icon={icon} icon_color={icon_color} positive={positive} destroy={destroy} vertical={vertical} passive={passive} grow={grow} margin={margin} noNewLine={noNewLine} loading={loading} label={label}>
     <slot/>
 </Button>

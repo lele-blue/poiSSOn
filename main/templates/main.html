@@ -1,8 +1,18 @@
 {% load static %}
 {% load inline_static_tags %}
 {% load poisson %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{{ poisson_instance_name }} - PoiSSOn</title>
 {# poisson_transform_main_html cuts off the body and html closing tags so the content can be injected (see main/templatetags/poisson.py  #}
 {% inline_staticfile 'build/client/index.html' as index %}{{ index|poisson_transform_main_html|safe }}
 {% block content %}{% endblock %}
+<style scoped>
+ :root {
+		--poisson-theme-bg: url("{{ poisson_theme_background_url }}");
+		{{ poisson_theme_root_css }}
+ }
+</style>
 </body>
 </html>

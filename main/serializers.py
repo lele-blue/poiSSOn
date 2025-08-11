@@ -1,10 +1,14 @@
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 import django_otp
 from django_otp.models import Device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 
 from main.core_settings import CORE_SETTINGS
-from main.models import CoreSetting, ServiceConfiguration, ServiceConfigurationStep, User, UserServiceConnection, Service, OriginMigrationToken
+from main.models import CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, User, UserServiceConnection, Service, OriginMigrationToken
+from main.permissions import check_user_has_manage_permission
 from otp_webauthn.models import WebauthnDevice
 
 
@@ -82,6 +86,8 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
             perms.append("poisson.core/poisson.core.webauthn.hint")
             perms.append("poisson.core/poisson.core.webauthn.user_verification_requirement")
             perms.append("poisson.core/poisson.core.webauthn.authenticator_attachment")
+            perms.append("poisson.manage.user.reset_password")
+            perms.append("poisson.theme.manage")
         return perms
 
     class Meta:
@@ -112,9 +118,14 @@ class CoreSettingValue(serializers.ModelSerializer):
         read_only_fields = ["key"]
 
     def validate(self, data):
-        if CORE_SETTINGS[self.context.get("key")]["type"] == "choice":
-            if data.get("value") not in CORE_SETTINGS[self.context.get("key")]["values"]:
-                raise serializers.ValidationError("value must be one of " + ",".join(CORE_SETTINGS[self.context.get("key")]["values"]))
+        setting = CORE_SETTINGS[self.context.get("key")]
+        match setting["type"]:
+            case "choice":
+                if data.get("value") not in setting["values"]:
+                    raise serializers.ValidationError("value must be one of " + ",".join(CORE_SETTINGS[self.context.get("key")]["values"]))
+            case "string":
+                if len(data.get("value", "")) > setting["max_length"]:
+                    raise ValueError(f"{data.get('key')} can not be longer than {setting['max_length']} Characters.")
 
         return data
 
@@ -135,3 +146,41 @@ class OTPDeviceSerializer(serializers.ModelSerializer):
         # This is not true, this serializer is for all `Device`s, but since Device is abstract this is a workaround abusing ducktyping
         model = TOTPDevice
         fields = ["persistent_id", "name", "icon", "type"]
+
+
+class SmallLoginLinkSerializer(serializers.ModelSerializer):
+
+    link = serializers.SerializerMethodField()
+
+    def get_link(self, obj):
+        return settings.SITE_URL + "/auth/go/code?token=" + obj.token
+
+    class Meta:
+        model = LoginLink
+        fields = ["purpose", "service", "link"]
+        read_only_fields = ["creator", "created"]
+
+class LoginLinkSerializer(SmallLoginLinkSerializer):
+    created = serializers.DateTimeField(
+        default=serializers.CreateOnlyDefault(timezone.now),
+        read_only = True
+    )
+
+    def validate(self, data):
+        # important check!
+        if self.context["user"].uid != data["user"] and not check_user_has_manage_permission(self.context["user"], "poisson.user.manage"):
+            raise serializers.ValidationError("Missing poisson.user.manage.password_reset  permission")
+
+        data["user"] = get_object_or_404(User, uid=data["user"]).pk
+
+        if not data.get("created"):
+            data["created"] = timezone.now()
+
+        if not data.get("creator"):
+            data["creator"] = self.context["user"]
+
+        return data
+
+    class Meta(SmallLoginLinkSerializer.Meta):
+        fields = ["purpose", "service", "user", "valid_until", "created", "link"]
+        read_only_fields = ["creator"]

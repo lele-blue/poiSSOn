@@ -1,13 +1,9 @@
-import {tick} from "svelte";
-import {get, patch} from "../../snippets/fetch";
-import {currentUser} from "../../state/currentUser";
-import {SettingType} from "./settingType";
-import {showDialog} from "../../state/dialogs"
-import ConfirmBox from "@components/ConfirmBox.svelte"
+import {get} from "../../snippets/fetch";
+import {UserManagerBase} from "./user_common";
 
 export type user = {username: string, email: string, uid: string, full_name: string}
 
-export default class UserManager extends SettingType<user[]> {
+export default class UserManager extends UserManagerBase<user[]> {
 	constructor(readonly data: {}) {
 		super();
 	}
@@ -26,39 +22,7 @@ export default class UserManager extends SettingType<user[]> {
 		throw new Error("setting is read-only")
 	}
 
-	delete(user: user) {
-		return new Promise<void>(resolve => {
-			showDialog(ConfirmBox, {
-				title: "Confirm User deletion", 
-				text: `User ${user.username} will be deleted`, 
-				confirm_icon: "delete", 
-				onDecline: async () => {
-					resolve();
-				},
-				onConfirm: async () => {
-					resolve();
-				},
-				confirm_text: `Delete ${user.username}`,
-			});
-		});
+	get_uid(user: user) {
+		return user.uid;
 	}
-
-	can_delete(user: user) {
-		return new Promise(resolve => {
-			const unsub = currentUser.subscribe(async val => {
-				if (val) {
-					await tick();
-					unsub();
-					resolve(val.uid != user.uid);
-				}
-			})
-		})
-	}
-
-	async warn_email(user: user) {
-		if (user.email?.length == 0) {
-			return "User has no email!"
-		}
-	}
-	
 }

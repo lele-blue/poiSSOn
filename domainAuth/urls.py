@@ -13,10 +13,11 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
 
-from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
+from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, LoginLinkView, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, main_view_dev_inlay_helper, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
     SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
 from main.oidc_provider_settings import wrap_authorize_post
 
@@ -28,6 +29,7 @@ wrap_authorize_post()
 
 router = SimpleRouter(trailing_slash=False)
 router.register(r'auth/api/manager/users', UserViewSet, basename='user')
+router.register(r'auth/api/manager/login_links', LoginLinkView, basename='login_link')
 
 
 urlpatterns = [
@@ -69,3 +71,6 @@ urlpatterns = [
     path('auth/<path:url>', main_view),
     path('auth', main_view),
 ]
+
+if settings.DEBUG:
+    urlpatterns.insert(0, path("auth/debug/dev_inlay", main_view_dev_inlay_helper))

@@ -11,12 +11,13 @@
     export let trailingIcon = null;
     export let password = false;
     export let full_width = false;
+    export let disabled;
 
     $: endIcon = error? 'alert-circle': trailingIcon;
 
     let focused = false;
     export let autofocus = false;
-    $: content = value.length;
+    $: content = value?.length;
     $: focused2 = focused || content;
 
     const dispatch = createEventDispatcher();
@@ -34,7 +35,8 @@
 
     function keydown(event) {
         if (event.code === "Enter") {
-            dispatch("submitted")
+            dispatch("submitted");
+            dispatch("submit_intent");
         }
     }
 
@@ -165,9 +167,9 @@
         {/if}
         <span bind:this={labelElem} class:wiggle={wiggleElem && content} class="label" class:content class:focused class:error>{placeholder}</span>
         {#if password}
-            <input bind:this={input} on:keydown={keydown} {autocomplete} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input bind:this={input} on:keydown={keydown} {disabled} {autocomplete} type="password" class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle(); dispatch("submit_intent");}}>
         {:else}
-            <input bind:this={input} on:keydown={keydown} {autocomplete} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle()}}>
+            <input bind:this={input} on:keydown={keydown} {disabled} {autocomplete} class:error bind:value on:focus={() => {focused = true}} on:blur={() => {focused = false; if(error) wiggle(); dispatch("submit_intent");}}>
         {/if}
         {#if endIcon}
             <div aria-hidden="true" class="icon-container icon-container-end" title={error}>

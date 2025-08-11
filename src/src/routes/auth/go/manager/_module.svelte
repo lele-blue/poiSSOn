@@ -30,7 +30,7 @@ onDestroy(url.subscribe(() => sidebar_active = false))
 
 <style>
     .manager_root {
-        background-image: url("/auth/go/static/resolve/login_bg.jpg");
+        background-image: var(--poisson-theme-bg);
         height: 100vh;
         background-size: cover;
         display: grid;
@@ -43,7 +43,7 @@ onDestroy(url.subscribe(() => sidebar_active = false))
         display: flex;
         margin-top: 40px;
         justify-content: center;
-        overflow-y: auto;
+        overflow-y: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -57,6 +57,8 @@ onDestroy(url.subscribe(() => sidebar_active = false))
         align-items: center;
         font-family: sans-serif;
         gap: 10px;
+        overflow-y: auto;
+        max-height: 100%;
     }
 
     .highlight_box__content {

@@ -36,7 +36,7 @@
         margin: 5px;
         padding: 5px;
         padding-left: 0;
-        --icon-col: var(--material-accent-color);
+        --icon-col: var(--icon-secondary-col);
         background: transparent;
         transition: background .5s ease;
         border-radius: 3px;
@@ -48,7 +48,7 @@
 
     .title {
         font-weight: bold;
-        color: var(--material-accent-color);
+        color: var(--icon-secondary-col);
     }
 
     .title_chevron {
@@ -69,7 +69,7 @@
     }
 
     a {
-        color: var(--material-accent-color);
+        color: var(--icon-secondary-col);
         text-decoration: none;
     }
 </style>

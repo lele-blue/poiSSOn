@@ -17,6 +17,7 @@
     export let disabled = false;
     export let smallLink = false;
     export let dialogButton = false;
+    export let reverse = false;
 
     let iconSize = undefined;
 
@@ -120,8 +121,8 @@
 
     button.dialogButton {
         background: transparent;
-        color: var(--material-accent-color);
-        --icon-col: var(--material-accent-color);
+        color: var(--icon-secondary-col);
+        --icon-col: var(--icon-secondary-col);
         box-shadow: none;
         text-transform: uppercase;
     }
@@ -140,9 +141,13 @@
         color: white;
         cursor: not-allowed;
     }
+
+    button.reverse {
+        flex-direction: row-reverse;
+    }
 </style>
 
-<button use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex">
+<button use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex" class:reverse>
     <slot name="icon">
         {#if icon !== null && !loading}
             <Icon height={iconSize} width={iconSize} description={label} icon={icon} color={icon_color}/>

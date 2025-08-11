@@ -1,3 +1,4 @@
+from django_otp import user_has_device
 from django_ratelimit.core import is_ratelimited
 from rest_framework import status
 from rest_framework.exceptions import APIException
@@ -65,7 +66,7 @@ class Verify2FactorFirst(APIException):
 
 class Is2FactorAuthenticated(BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_verified():
+        if user_has_device(request.user, True) and (not request.user.is_verified()):
             raise Verify2FactorFirst()
         return True
 

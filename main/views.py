@@ -7,7 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 import re
 import base64
 from django.conf import settings
-from django.db.models import F, Q, QuerySet
+from django.db.models import Q, QuerySet
 from django.db.models.aggregates import Count
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import is_ratelimited
@@ -37,16 +37,28 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from main.models import ApplicationPassword, CoreSetting, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
-from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, Is2FactorAuthenticated, IsMasterSession
-from main.serializers import CoreSettingValue, FullUserSerializer, OTPDeviceSerializer, ServiceConfigurationStepSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
+from main.core_settings import CORE_SETTINGS
+from main.models import ApplicationPassword, CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
+from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, Is2FactorAuthenticated, IsMasterSession, check_user_has_manage_permission
+from main.serializers import CoreSettingValue, FullUserSerializer, LoginLinkSerializer, OTPDeviceSerializer, ServiceConfigurationStepSerializer, SmallLoginLinkSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
 from main.session_tree import check_is_2fa_authenticated_tree_aware, logout_tree_aware
 from otp_webauthn.models import WebauthnDevice
-
+from main import theming
+from main import oobe
 
 @ensure_csrf_cookie
 def main_view(request, url=None):
-    return render(request, "main.html", {})
+    return render(request, "main.html", {
+        "poisson_theme_background_url": theming.get_current_background_url(),
+        "poisson_theme_root_css": theming.get_current_root_css(),
+        "poisson_instance_name": theming.get_instance_name(),
+    })
+
+def main_view_dev_inlay_helper(request):
+    return render(request, "main_inlay_dev.html", {
+        "poisson_theme_background_url": theming.get_current_background_url(),
+        "poisson_theme_root_css": theming.get_current_root_css(),
+    })
 
 
 def static_resolver(request, url):
@@ -816,6 +828,7 @@ class ManagerCoreSetting(APIView):
         setting_serializer = CoreSettingValue(settingObj, request.data, context={"key": setting})
         setting_serializer.is_valid(raise_exception=True)
         setting_serializer.update(settingObj, request.data)
+        CORE_SETTINGS[setting_serializer.data["key"]].get("post_update_hook", lambda: None)()
 
         return Response(CoreSettingValue(settingObj).data)
 
@@ -829,13 +842,14 @@ class LogOut(APIView):
 
 
 class UserPagination(LimitOffsetPagination):
-    default_limit = 3
+    default_limit = 25
     max_limit = 25
 
 
 class UserViewSet(ModelViewSet):
     permission_classes = [IsMasterSession, HasUserManagePermission]
     pagination_class = UserPagination
+    lookup_field = "uid"
 
     def get_queryset(self):
         order_by = self.request.GET.get("sort", "")
@@ -851,12 +865,41 @@ class UserViewSet(ModelViewSet):
             qs = qs.order_by(*order_by)
         return qs
 
-    def retrieve(self, request):
+    def retrieve(self, request, uid):
         self.kwargs["method"] = "retrieve"
-        return super().retrieve(request)
+        return super().retrieve(request, uid)
 
     def get_serializer_class(self):
         if self.kwargs.get("method") == "retrieve" or self.request.method not in SAFE_METHODS:
             return FullUserSerializer
         return SmallUserSerializer
+
+
+class LoginLinkView(ModelViewSet):
+    serializer_class = LoginLinkSerializer
+
+    def get_serializer_class(self):
+        return LoginLinkSerializer if self.has_manage_permission() else SmallLoginLinkSerializer
+
+    def get_serializer_context(self):
+        return {"user": self.request.user, "request": self.request}
+
+    def has_manage_permission(self):
+        return check_user_has_manage_permission(self.request.user, "poisson.manage.user.reset_password")
+
+    def get_permissions(self):
+        result = IsMasterSession
+        if self.request.user.is_authenticated:
+            if self.request.method not in SAFE_METHODS and "user" in self.request.data and self.request.data["user"] != self.request.user.uid:
+                result &= HasUserManagePermission
+
+        return [result()]
+
+    def get_queryset(self):
+        if self.has_manage_permission():
+            return LoginLink.objects.filter(user=self.request.user)
+        return LoginLink.objects.all()
+
+    def list(self, _):
+        raise PermissionDenied()
 
