@@ -30,6 +30,74 @@
           ]
         },
         {
+          "name": "Sessions",
+          "header_text": "",
+          "slug": "sessions",
+          "content": [
+            {
+              "name": "Lifetime mode",
+              "help_text": "When the session end condition is met, the master session is ended and the user has to reauthenticate (and re-validate the session using a second factor, if set up)",
+              "type": "poisson.core_setting",
+              "id": "poisson.core.session_lifetime.mode",
+              "widget": "poisson.simple.choice",
+              "widget_data": {
+                "choices": [
+                  {
+                    "key": "poisson.session_lifetime.mode.inactivity",
+                    "text": "End Session after an amount of Inactivity"
+                  },
+                  {
+                    "key": "poisson.session_lifetime.mode.user_agent_close",
+                    "text": "End Session after the user closes their browser"
+                  },
+                  {
+                    "key": "poisson.session_lifetime.mode.fixed_after_login",
+                    "text": "End Session after a fixed amount of time after login"
+                  }
+                ]
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.session_lifetime.mode"
+              }
+            },
+            {
+              "name": "Session Lifetime",
+              "derived": true,
+              "widget": "poisson.timedelta",
+              "type": "poisson.core_setting",
+              "condition": {
+                "by_id": "poisson.core.session_lifetime.mode",
+                "match": "poisson.session_lifetime.mode.fixed_after_login"
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.session_lifetime.value"
+              }
+            },
+            {
+              "name": "Inactivity Amount",
+              "derived": true,
+              "widget": "poisson.timedelta",
+              "type": "poisson.core_setting",
+              "condition": {
+                "by_id": "poisson.core.session_lifetime.mode",
+                "match": "poisson.session_lifetime.mode.inactivity"
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.session_lifetime.value"
+              }
+            },
+            {
+              "name": "Child Session Lifetime",
+              "widget": "poisson.timedelta",
+              "help_text": "A child session is created when the 'forward auth' authentication method is used cross-origin. Reauthentication will occur silently, so a short timeframe is recommended",
+              "type": "poisson.core_setting",
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.child_session_lifetime.value"
+              }
+            }
+          ]
+        },
+        {
           "name": "Webauthn",
           "header_text": "Webauthn/Passkeys can be configured here",
           "slug": "webauthn",
@@ -242,6 +310,9 @@
                       "name": "Actions",
                       "extended": true,
                       "widget": "poisson.choice.link"  ,
+                      "condition": {
+                        "call": "is_existing_user"
+                      },
                       "widget_data": {
                         "choices": [
                           {
@@ -255,6 +326,24 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "group_key": "username",
+                      "name": "Username",
+                      "condition": {
+                        "call": "is_existing_user",
+                        "invert": true
+                      },
+                      "help_text": "This can not be changed later",
+                      "widget": "poisson.simple.input",
+                      "widget_data": {
+                        "input": {
+                          "icon": "account",
+                          "placeholder": "Username"
+                        }
+                      },
+                      "warn_if": [
+                      ]
                     },
                     {
                       "group_key": "first_name",
@@ -295,6 +384,48 @@
                       "warn_if": [
                         {"call": "warn_email_direct"}
                       ]
+                    },
+                    {
+                      "name": " ",
+                      "extended": true,
+                      "group_key": "uid",
+                      "condition": {
+                        "call": "is_existing_user",
+                        "invert": true
+                      },
+                      "widget": "poisson.choice.link"  ,
+                      "widget_data": {
+                        "choices": [
+                          {
+                            "icon": "content-save",
+                            "text": "Create",
+                            "call": "save",
+                            "mode": "replace",
+                            "path": "/auth/go/manager/[section]/[...data]",
+                            "params": {
+                              "section": "users",
+                              "data": ["manager", "$val"]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "name": "",
+                      "extended": true,
+                      "condition": {
+                        "call": "is_existing_user"
+                      },
+                      "widget": "poisson.choice.link"  ,
+                      "widget_data": {
+                        "choices": [
+                          {
+                            "icon": "content-save",
+                            "text": "Save",
+                            "call": "save"
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
@@ -392,6 +523,158 @@
             "permissions": ["poisson.users.groups"]
           },
           "content": []
+        }
+      ]
+    },
+    {
+      "name": "_OOBE",
+      "slug": "oobe",
+      "hidden": true,
+      "pages": [
+        {
+          "name": "Hello from PoiSSOn",
+          "header_text": "This is the first startup of PoiSSOn, so we need to set some things up. This wizard will guide you through the setup process in about 3 Minutes",
+          "slug": "start",
+          "content": [
+            {
+              "name": "",
+              "widget": "poisson.custom.oobe_nav",
+              "extended": true,
+              "type": null,
+              "widget_data": {
+                "next": "admin"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Setup an admin account",
+          "header_text": "Please create a super-admin account",
+          "slug": "admin",
+          "content": [
+            {
+                "name": null,
+                "widget": "poisson.context_group",
+                "type": "poisson.oobe.admin_creation",
+                "content": [
+                  {
+                    "group_key": "username",
+                    "name": "Username",
+                    "type": null,
+                    "widget": "poisson.simple.input",
+                    "warn_if": [
+                      {"call": "warn_user_exists"},
+                      {"call": "warn_username_empty"}
+                    ],
+                    "widget_data": {
+                      "disabled_func": "disabled",
+                      "input": {
+                        "placeholder": "Username",
+                        "autocomplete": "off"
+                      }
+                    }
+                  },
+                  {
+                    "group_key": "password",
+                    "name": "Password",
+                    "type": null,
+                    "widget": "poisson.simple.input",
+                    "warn_if": [
+                      {"call": "warn_user_exists"},
+                      {"call": "warn_password"}
+                    ],
+                    "widget_data": {
+                      "disabled_func": "disabled",
+                      "input": {
+                        "placeholder": "Password",
+                        "password": true,
+                        "autocomplete": "new-password"
+                      }
+                    }
+                  },
+                  {
+                    "group_key": "password2",
+                    "name": "Password (Again)",
+                    "type": null,
+                    "warn_if": [
+                      {"call": "warn_user_exists"},
+                      {"call": "warn_password2"}
+                    ],
+                    "widget": "poisson.simple.input",
+                    "widget_data": {
+                      "disabled_func": "disabled",
+                      "input": {
+                        "placeholder": "Password",
+                        "password": true,
+                        "autocomplete": "new-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "",
+                    "group_key": "_nav",
+                    "type": null,
+                    "widget": "poisson.custom.oobe_nav",
+                    "extended": true,
+                    "group_key": "username",
+                    "widget_data": {
+                      "pre_next": "verify_data_and_create",
+                      "next": "instance_name",
+                      "back": "start"
+                    }
+                  }
+                ]
+            }
+          ]
+        },
+        {
+          "name": "Choose a name for your instance",
+          "header_text": "",
+          "slug": "instance_name",
+          "content": [
+            {
+              "name": "Instance Name",
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.input",
+              "help_text": "This is the name that will be shown in the tab Title of your PoiSSOn instance<br>Additionally, this name will be used to identify your users across federation",
+              "widget_data": {
+                "input": {
+                  "placeholder": "Instance Name"
+                }
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.core.instance_name"
+              }
+            },
+            {
+              "name": "",
+              "widget": "poisson.custom.oobe_nav",
+              "extended": true,
+              "type": null,
+              "widget_data": {
+                "back": "admin",
+                "next": "finish"
+              }
+            }
+          ]
+        },
+        {
+          "name": "That's it",
+          "header_text": "Your PoiSSOn instance is now set up.",
+          "slug": "finish",
+          "content": [
+            {
+              "name": "",
+              "widget": "poisson.custom.oobe_nav",
+              "extended": true,
+              "type": "poisson.oobe.finish",
+              "widget_data": {
+                "back": "instance_name",
+                "pre_next": "finish",
+                "next": "_"
+              }
+            }
+          ]
         }
       ]
     }

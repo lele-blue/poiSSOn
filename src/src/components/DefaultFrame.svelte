@@ -47,7 +47,7 @@ export let settings = true;
 <TopBar {back} {settings}/>
 <div class="login_root">
     <div class="login_wrapper">
-        <div class="login_box">
+        <div class="login_box highlight_box__content">
             <slot/>
         </div>
     </div>

@@ -1,12 +1,14 @@
+from datetime import timedelta
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
 from django.db import transaction
 from django_otp.middleware import OTPMiddleware as OTPInternalMiddleware
 from typing import Optional
-from django.contrib.auth import logout
+from django.contrib.auth import login, logout
 from django.db.models import Q
 from django_otp import DEVICE_ID_SESSION_KEY
 
+from main.core_settings import get_core_setting
 from main.models import SessionTreeEdge
 
 
@@ -65,3 +67,18 @@ def logout_tree_aware(request):
             Session.objects.get(pk=child).delete()
 
     logout(request)
+
+
+def login_master_session(request, user):
+    login(request, user)
+    # request.session.set_expiry()
+    request.session["is_master_session"] = True
+    lifetime = 0;
+    match get_core_setting("poisson.core.session_lifetime.mode", user):
+        case "poisson.session_lifetime.user_agent_close":
+            lifetime = 0
+        case "poisson.session_lifetime.fixed_after_login":
+            lifetime = timedelta(minutes=get_core_setting("poisson.core.session_lifetime.value", user))
+        case "poisson.session_lifetime.inactivity":
+            lifetime = get_core_setting("poisson.core.session_lifetime.value", user)
+    request.session.set_expiry(lifetime)

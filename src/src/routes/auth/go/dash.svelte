@@ -95,7 +95,7 @@
             {#if pending_configuration_servies.length}
                 <h1>Configure new Service</h1>
                 {#each pending_configuration_servies as pcs}
-<LoadButton vertical={true} on:clicked={event => {event.detail.waitUntil(new Promise(() => {})); $goto(`/auth/go/configure/${pcs.service.name}`)}} icon={pcs.service.icon}>{pcs.service.name}</LoadButton>
+<LoadButton vertical={true} on:clicked={event => {event.detail.waitUntil(new Promise(() => {})); $goto(`/auth/go/configure/[service]`, {service: pcs.service.name})}} icon={pcs.service.icon}>{pcs.service.name}</LoadButton>
                 {/each}
             {/if}
 </DefaultFrame>

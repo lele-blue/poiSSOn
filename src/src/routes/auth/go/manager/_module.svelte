@@ -100,21 +100,23 @@ onDestroy(url.subscribe(() => sidebar_active = false))
 </style>
 
 <Dialogs/>
-<TopBar>
+<TopBar settings={!location.pathname.startsWith("/auth/go/manager/oobe")}>
     <div slot="before" class="expand-sidebar">
         <Button on:click={() => sidebar_active = !sidebar_active} icon="menu" dialogButton={true}/>
     </div>
 </TopBar>
 <div class="manager_root">
     <aside class="highlight_box" class:active={sidebar_active}>
-        <Input icon="search" placeholder="Search Settings" full_width={true} bind:value={search_term}/>
-        {#await manage_pages}
-            <Loader/>
-        {:then pages}
-            {#each pages.categories as category}
-                <SidebarItem {...category} {search_term}>{category.name}</SidebarItem>
-            {/each}
-        {/await}
+        {#if !location.pathname.startsWith("/auth/go/manager/oobe") }
+            <Input icon="search" placeholder="Search Settings" full_width={true} bind:value={search_term}/>
+            {#await manage_pages}
+                <Loader/>
+            {:then pages}
+                {#each pages.categories.filter(category => category.hidden !== true) as category}
+                    <SidebarItem {...category} {search_term}>{category.name}</SidebarItem>
+                {/each}
+            {/await}
+        {/if}
     </aside>
     <div class="highlight_wrapper">
         <div class="highlight_box login_box highlight_box__content">

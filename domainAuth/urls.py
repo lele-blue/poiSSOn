@@ -19,6 +19,7 @@ from django.urls import path, include
 
 from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, LoginLinkView, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, main_view_dev_inlay_helper, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
     SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
+from main.oobe import CreateAdminAndFinishOOBE
 from main.oidc_provider_settings import wrap_authorize_post
 
 from oidc_provider.views import AuthorizeView
@@ -62,6 +63,7 @@ urlpatterns = [
     path('auth/api/application_password/management/<str:service_name>/check_password/<str:username>', CheckApplicationPassword.as_view()),
     path('auth/api/configuration/view/<str:service_name>', ViewServiceConfiguration.as_view()),
     path('auth/api/application_password/<str:service_name>', SetApplicationPassword.as_view()),
+    path('auth/api/oobe/create_admin_and_finish_oobe', CreateAdminAndFinishOOBE.as_view()),
 
     path('auth/api/manager/core_setting/<str:setting>', ManagerCoreSetting.as_view()),
 

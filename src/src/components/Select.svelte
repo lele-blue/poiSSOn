@@ -85,7 +85,16 @@
 
     $: {
         onchange(value, options);
-    }
+		}
+
+		$: {
+				if (opened) {
+						let elem = document.querySelector(".highlight_box__content");
+						if (elem.scrollHeight == elem.clientHeight) elem.style.overflowY = "unset";
+				} else {
+						setTimeout(() => document.querySelector(".highlight_box__content").style.overflowY = "auto", 500)
+				}
+		}
 </script>
 
 <style>

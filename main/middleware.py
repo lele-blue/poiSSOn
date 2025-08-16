@@ -1,6 +1,7 @@
+import re
 from django.conf import settings
 from django.core.exceptions import MiddlewareNotUsed
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 import urllib.parse as urlparse
 import django_otp
@@ -30,15 +31,15 @@ def admin_needs_twofa(get_response):
     return process_request
 
 def oobe(get_response):
-    oobe_finished = False
-    def process_request(request):
-        if oobe_finished \
-            or (\
-                (request.user.is_authenticated and request.user.is_admin) or User.objects.all().count() == 0\
-            )\
+    def process_request(request: HttpRequest):
+        if get_core_setting("poisson.core.oobe.state", None) != "poisson.oobe.first_start"\
+            or (re.match(r"^/auth/(api|debug|go/static|go/manager/oobe|go/login_state_mod)", request.path)\
+            or not (\
+                (request.user.is_authenticated and request.user.is_superuser) or User.objects.all().count() == 0\
+            ))\
         :
             return get_response(request)
-        return HttpResponseRedirect("/auth/go/manager/oobe")
+        return HttpResponseRedirect("/auth/go/manager/oobe/start")
 
     if get_core_setting("poisson.core.oobe.state", None) != "poisson.oobe.first_start":
         raise MiddlewareNotUsed()

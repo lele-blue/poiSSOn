@@ -70,9 +70,36 @@ CORE_SETTINGS = {
         "type": "string",
         "post_update_hook": invalidate_theme_cache,
         "max_length": 32
-    }
+    },
+    "poisson.core.session_lifetime.mode": {
+        "default": "poisson.session_lifetime.mode.inactivity",
+        "type": "choice",
+        "values": [
+            "poisson.session_lifetime.mode.inactivity",
+            "poisson.session_lifetime.mode.user_agent_close",
+            "poisson.session_lifetime.mode.fixed_after_login"
+        ]
+    },
+    "poisson.core.session_lifetime.value": {
+        "type": "integer",
+        "default": "10080",
+        "min": 60,
+    },
+    "poisson.core.child_session_lifetime.value": {
+        "type": "integer",
+        "default": "60",
+        "min": 60,
+    },
 }
 
 
 def get_core_setting(key, user: User):
-    return CoreSetting.objects.get(key=key).value
+    val = CoreSetting.objects.get(key=key).value
+    if CORE_SETTINGS[key]["type"] == "integer":
+        val = int(val)
+    return val
+
+def set_core_setting_universally(key, value):
+    cs = CoreSetting.objects.get(key=key)
+    cs.value = value
+    cs.save()

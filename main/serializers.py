@@ -90,6 +90,17 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
             perms.append("poisson.theme.manage")
         return perms
 
+    @classmethod
+    def get_oobe(cls):
+        user = User()
+        user.is_superuser = True
+        user.username = "first time Setup"
+        user.pk = 1337
+        user.uid = "user_oobe"
+        oobe = cls(user)
+        print(oobe.data)
+        return oobe
+
     class Meta:
         model = User
         fields = ["username", "permissions", "uid"]
@@ -125,7 +136,17 @@ class CoreSettingValue(serializers.ModelSerializer):
                     raise serializers.ValidationError("value must be one of " + ",".join(CORE_SETTINGS[self.context.get("key")]["values"]))
             case "string":
                 if len(data.get("value", "")) > setting["max_length"]:
-                    raise ValueError(f"{data.get('key')} can not be longer than {setting['max_length']} Characters.")
+                    raise serializers.ValidationError(f"{data.get('key')} can not be longer than {setting['max_length']} Characters.")
+            case "integer":
+                val = data.get("value", "")
+                if not val.isnumeric():
+                    raise serializers.ValidationError("Can only set integers")
+                val = int(val)
+                if setting.get("min") and val < setting.get("min"):
+                    raise serializers.ValidationError("Value < min")
+                if setting.get("max") and val > setting.get("max"):
+                    raise serializers.ValidationError("Value > max")
+
 
         return data
 

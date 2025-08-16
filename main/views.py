@@ -37,11 +37,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from main.core_settings import CORE_SETTINGS
+from main.core_settings import CORE_SETTINGS, get_core_setting
 from main.models import ApplicationPassword, CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
 from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, Is2FactorAuthenticated, IsMasterSession, check_user_has_manage_permission
 from main.serializers import CoreSettingValue, FullUserSerializer, LoginLinkSerializer, OTPDeviceSerializer, ServiceConfigurationStepSerializer, SmallLoginLinkSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
-from main.session_tree import check_is_2fa_authenticated_tree_aware, logout_tree_aware
+from main.session_tree import check_is_2fa_authenticated_tree_aware, login_master_session, logout_tree_aware
 from otp_webauthn.models import WebauthnDevice
 from main import theming
 from main import oobe
@@ -70,8 +70,7 @@ class AjaxLogin(APIView):
     def post(self, request):
         user = authenticate(username=request.POST.get("username"), password=request.POST.get("password"))
         if user:
-            login(request, user)
-            request.session["is_master_session"] = True
+            login_master_session(request, user)
             return Response(UserPermissionStateSerializer(user).data)
         else:
             raise PermissionDenied()
@@ -110,7 +109,10 @@ def check_user_has_service_permission(url_or_service: Union[Service, str], user,
 
 
 def login_check(request):
-    if not request.META.get("HTTP_X_ORIGINAL_URL") and request.user.is_authenticated:
+    if not request.META.get("HTTP_X_ORIGINAL_URL") and request.user.is_authenticated or oobe.is_in_oobe_mode():
+        if oobe.is_in_oobe_mode():
+            return HttpResponse(JSONRenderer().render(UserPermissionStateSerializer.get_oobe().data), status=200)
+
         return HttpResponse(JSONRenderer().render(UserPermissionStateSerializer(request.user).data), status=200)
 
     if request.META.get('HTTP_AUTHORIZATION'):
@@ -459,6 +461,8 @@ class AuthenticateCrossorigin(View):
             request.session.save()
 
         token_obj.delete()
+
+        request.session.set_expiry(get_core_setting("poisson.core.child_session_lifetime.value", request.user if request.user.is_authenticated else None))
 
         return HttpResponseRedirect(next_)
 
@@ -847,7 +851,7 @@ class UserPagination(LimitOffsetPagination):
 
 
 class UserViewSet(ModelViewSet):
-    permission_classes = [IsMasterSession, HasUserManagePermission]
+    permission_classes = [IsMasterSession, HasUserManagePermission, Is2FactorAuthenticated]
     pagination_class = UserPagination
     lookup_field = "uid"
 
