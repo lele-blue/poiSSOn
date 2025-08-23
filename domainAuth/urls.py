@@ -27,7 +27,7 @@ wrap_authorize_post()
 
 
 urlpatterns = [
-    path('auth/go/admin', admin.site.urls),
+    path('auth/go/admin/', admin.site.urls),
     path('auth/go/static/resolve/<path:url>', static_resolver),
     path('auth/go/unauthenticated', redirect_unauthenticated, name="redirect_unauth"),
     path('auth/api/logon', AjaxLogin.as_view()),
