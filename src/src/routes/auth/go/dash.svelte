@@ -72,7 +72,7 @@
             {:else}
                 {#each services as registration}
                     <div class="service_row">
-                        <LoadButton on:clicked={event => {event.detail.waitUntil(new Promise(() => {})); select_service(registration)}} icon={registration.service.icon}>{registration.service.name}</LoadButton>
+                        <LoadButton on:clicked={event => {event.detail.waitUntil(new Promise(resolve => setTimeout(resolve, 5000))); select_service(registration)}} icon={registration.service.icon}>{registration.service.name}</LoadButton>
                             {#if registration.service.can_have_application_password || registration.service.configuration_view_template}
                                 <Button dialogButton={true} on:click={() => {opened_services[registration.service.name] = !opened_services[registration.service.name]}} icon="cog"></Button>
                             {/if}

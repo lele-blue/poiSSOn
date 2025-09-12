@@ -1,5 +1,11 @@
-export function handle_400(data: {action?: string, reason?: string, detail?: string}, goto: (url: string, parms: any) => void) {
-    if (data.detail) {
+import {showDialog} from "../state/dialogs";
+import AlertBox from "@components/AlertBox.svelte";
+
+export function handle_400(data: {action?: string, reason?: string, detail?: string}, goto: (url: string, parms: any) => void, handle_detail = true) {
+		if (data.detail?.startsWith("Request was throttled")) {
+				showDialog(AlertBox, {"title": "Not so fast", "text": data.detail});
+		}
+    if (data.detail && handle_detail) {
         return data.detail
     }
     switch (data.action) {
@@ -15,6 +21,10 @@ export function handle_400(data: {action?: string, reason?: string, detail?: str
             console.error(data.reason);
             return data.reason;
         }
+				case "alert": {
+						showDialog(AlertBox, {"title": "Alert", "text": data.reason});
+						break;
+				}
     }
     return null;
 }

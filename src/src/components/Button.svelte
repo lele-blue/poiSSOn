@@ -19,6 +19,10 @@
     export let dialogButton = false;
     export let reverse = false;
 
+		let elem;
+
+		export const getDOMElement = () => elem;
+
     let iconSize = undefined;
 
     $: {
@@ -147,7 +151,7 @@
     }
 </style>
 
-<button use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex" class:reverse>
+<button bind:this={elem} use:ripple aria-label={label} on:click class:disabled class:dialogButton class:smallLink class:noNewLine class:margin class:grow class:positive class:vertical class:destroy class:passive class="flex-align-items-center flex" class:reverse>
     <slot name="icon">
         {#if icon !== null && !loading}
             <Icon height={iconSize} width={iconSize} description={label} icon={icon} color={icon_color}/>

@@ -2,9 +2,10 @@ from django_otp import user_has_device
 from django_ratelimit.core import is_ratelimited
 from rest_framework import status
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework_api_key.permissions import BaseHasAPIKey
 
+from main.core_settings import get_core_setting
 from main.models import ConfigurationApiKey, Service, User
 from main.session_tree import is_master_session
 
@@ -52,10 +53,29 @@ class HasCoreSettingPermission(BasePermission):
         return check_user_has_manage_permission(request.user, f"poisson.core/{obj}")
 
 
+class HasUserServiceManagePermission(BasePermission):
+    def has_permission(self, request, view):
+        return check_user_has_manage_permission(request.user, "poisson.user.services.manage")
+
 class HasUserManagePermission(BasePermission):
     def has_permission(self, request, view):
         return check_user_has_manage_permission(request.user, "poisson.user.manage")
 
+class IsSelf(BasePermission):
+    def has_permission(self, request, view):
+        if hasattr(view, "kwargs"):
+            return request.user.uid == view.kwargs.get("uid")
+        return request.user.uid == request.kwargs.get("uid")
+
+
+class ReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS
+
+
+class IsPasswordSelfServiceEnabled(BasePermission):
+    def has_permission(self, request, view):
+        return get_core_setting("poisson.self_service.password", request.user)
 
 class Verify2FactorFirst(APIException):
     status_code = status.HTTP_401_UNAUTHORIZED

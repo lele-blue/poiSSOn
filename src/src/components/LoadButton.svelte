@@ -1,5 +1,5 @@
 <script>
-    import {createEventDispatcher} from "svelte";
+    import {createEventDispatcher, onMount, onDestroy} from "svelte";
     import Button from "./Button.svelte";
 
     const dispatch = createEventDispatcher();
@@ -19,6 +19,31 @@
     export let reverse = false;
     let loading = false;
     export let label = null;
+		export let submit = false;
+
+		let buttonElem;
+		let form;
+
+
+		function formSubmitHandler(event) {
+				if (disabled) return;
+				event.preventDefault();
+				event.stopPropagation();
+		}
+
+		onMount(() => {
+				if (submit) {
+						let elem = buttonElem.getDOMElement();
+						form = elem.closest("form");
+						form.addEventListener("submit", formSubmitHandler, {capture: true});
+				}
+		});
+
+		onDestroy(() => {
+				if (form) {
+						form.removeEventListener("submit", formSubmitHandler);
+				}
+		});
 
     function click() {
         if (loading || disabled) return;
@@ -43,6 +68,6 @@
     }
 </script>
 
-<Button on:click={click} {disabled} {reverse} {dialogButton} smallLink={smallLink} icon={icon} icon_color={icon_color} positive={positive} destroy={destroy} vertical={vertical} passive={passive} grow={grow} margin={margin} noNewLine={noNewLine} loading={loading} label={label}>
+<Button bind:this={buttonElem} on:click={click} {disabled} {reverse} {dialogButton} smallLink={smallLink} icon={icon} icon_color={icon_color} positive={positive} destroy={destroy} vertical={vertical} passive={passive} grow={grow} margin={margin} noNewLine={noNewLine} loading={loading} label={label}>
     <slot/>
 </Button>

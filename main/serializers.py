@@ -1,3 +1,4 @@
+from typing import Optional
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -5,8 +6,10 @@ import django_otp
 from django_otp.models import Device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
+from django.contrib.auth.password_validation import password_changed, validate_password
+from rest_framework.exceptions import PermissionDenied
 
-from main.core_settings import CORE_SETTINGS
+from main.core_settings import CORE_SETTINGS, get_core_setting
 from main.models import CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, User, UserServiceConnection, Service, OriginMigrationToken
 from main.permissions import check_user_has_manage_permission
 from otp_webauthn.models import WebauthnDevice
@@ -42,6 +45,12 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ["name", "icon", "sub_url", "origin", "max_configurations", "has_configurations", "configurable", "can_have_application_password", "configuration_view_template", "require_2fa"]
+
+
+class AdminServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ["name", "icon", "sub_url", "origin", "can_have_application_password", "require_2fa_if_configured", "uid"]
 
 
 class ServiceConfigurationStepSerializer(serializers.ModelSerializer):
@@ -88,6 +97,9 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
             perms.append("poisson.core/poisson.core.webauthn.authenticator_attachment")
             perms.append("poisson.manage.user.reset_password")
             perms.append("poisson.theme.manage")
+
+        if get_core_setting("poisson.self_service.password", obj):
+            perms.append("poisson.self_service.password_change")
         return perms
 
     @classmethod
@@ -109,17 +121,26 @@ class UserPermissionStateSerializer(serializers.ModelSerializer):
 class SmallUserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
 
+    def __init__(self, instance: Optional[User] = None, *args, **kwargs):
+        # prevent admin field change if not explicitly allowed
+        if "data" in kwargs and instance and instance.is_superuser != kwargs.get("data", {}).get("is_superuser") and not kwargs.get("context", {}).get("can_set_superuser"):
+            raise PermissionDenied()
+        if "data" in kwargs and not instance:
+            if kwargs.get("data", {}).get("is_superuser"):
+                raise PermissionDenied()
+        super().__init__(instance, *args, **kwargs)
+
     def get_full_name(self, obj: User):
         return obj.get_full_name()
 
     class Meta:
         model = User
-        fields = ["username", "email", "full_name", "uid"]
+        fields = ["username", "email", "full_name", "uid", "is_superuser"]
 
 
 class FullUserSerializer(SmallUserSerializer):
     class Meta(SmallUserSerializer.Meta):
-        fields = [*SmallUserSerializer.Meta.fields, "first_name", "last_name"]
+        fields = [*SmallUserSerializer.Meta.fields, "first_name", "last_name", "is_superuser"]
 
 
 class CoreSettingValue(serializers.ModelSerializer):
@@ -146,7 +167,9 @@ class CoreSettingValue(serializers.ModelSerializer):
                     raise serializers.ValidationError("Value < min")
                 if setting.get("max") and val > setting.get("max"):
                     raise serializers.ValidationError("Value > max")
-
+            case "boolean":
+                if data.get("value") not in ["true", "false"]:
+                    raise serializers.ValidationError("Can only set to true or false")
 
         return data
 
@@ -172,13 +195,17 @@ class OTPDeviceSerializer(serializers.ModelSerializer):
 class SmallLoginLinkSerializer(serializers.ModelSerializer):
 
     link = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return obj.user.username
 
     def get_link(self, obj):
-        return settings.SITE_URL + "/auth/go/code?token=" + obj.token
+        return settings.SITE_URL + settings.BASEPATH + "/go/code?token=" + obj.token
 
     class Meta:
         model = LoginLink
-        fields = ["purpose", "service", "link"]
+        fields = ["purpose", "service", "link", "username"]
         read_only_fields = ["creator", "created"]
 
 class LoginLinkSerializer(SmallLoginLinkSerializer):
@@ -187,12 +214,16 @@ class LoginLinkSerializer(SmallLoginLinkSerializer):
         read_only = True
     )
 
+    user = serializers.SlugRelatedField(queryset=User.objects.all(), slug_field="uid", style={'base_template': 'input.html'})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def validate(self, data):
         # important check!
+        # fixme, permission check in the serializer is bad
         if self.context["user"].uid != data["user"] and not check_user_has_manage_permission(self.context["user"], "poisson.user.manage"):
-            raise serializers.ValidationError("Missing poisson.user.manage.password_reset  permission")
-
-        data["user"] = get_object_or_404(User, uid=data["user"]).pk
+            raise serializers.ValidationError("Missing poisson.user.manage.password_reset permission")
 
         if not data.get("created"):
             data["created"] = timezone.now()
@@ -203,5 +234,30 @@ class LoginLinkSerializer(SmallLoginLinkSerializer):
         return data
 
     class Meta(SmallLoginLinkSerializer.Meta):
-        fields = ["purpose", "service", "user", "valid_until", "created", "link"]
+        fields = ["purpose", "service", "user", "valid_until", "created", "link", "username"]
         read_only_fields = ["creator"]
+
+
+# This class only handles password change redemptions, since session or service logins are handled on the fly in the code view
+class PasswordChangeSerializer(serializers.Serializer):
+    password = serializers.CharField(max_length=32)
+
+    def validate_password(self, password):
+        validate_password(password, self.instance)
+        return password
+
+
+    def update(self, instance: User, validated_data):
+        print(validated_data)
+        instance.set_password(validated_data.get("password"))
+        password_changed(validated_data.get("password"), instance)
+        instance.save()
+        return instance
+
+# This class only handles password change redemptions, since session or service logins are handled on the fly in the code view
+class RedeemLoginLinkDto(PasswordChangeSerializer):
+    def __init__(self, instance: LoginLink, *args, **kwargs):
+        super().__init__(instance.user, *args, **kwargs)
+
+class SetUserServiceConnectionsDto(serializers.Serializer):
+    services = serializers.SlugRelatedField(queryset=Service.objects.all(), many=True, slug_field="uid", style={'base_template': 'input.html'})

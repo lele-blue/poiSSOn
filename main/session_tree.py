@@ -71,7 +71,6 @@ def logout_tree_aware(request):
 
 def login_master_session(request, user):
     login(request, user)
-    # request.session.set_expiry()
     request.session["is_master_session"] = True
     lifetime = 0;
     match get_core_setting("poisson.core.session_lifetime.mode", user):
@@ -82,3 +81,4 @@ def login_master_session(request, user):
         case "poisson.session_lifetime.inactivity":
             lifetime = get_core_setting("poisson.core.session_lifetime.value", user)
     request.session.set_expiry(lifetime)
+

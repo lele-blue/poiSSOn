@@ -20,6 +20,7 @@
     export let type;
     export let type_data = {};
     export let widget;
+    export let form = false;
     export let derived = false;
     export let id = undefined;
     export let condition = null;
@@ -27,6 +28,7 @@
     export let warn_if = [];
     export let extra_data = null;
     export let extended = false;
+    export let hidden = false;
     export let content = null; // this is just for context groups nested settings
 
     let prev_id;
@@ -65,6 +67,7 @@
         "poisson.context_group": () => null, // is special, handled in this component
         "poisson.simple.choice": () => import("@components/manager/widgets/SimpleSelect.svelte"),
         "poisson.simple.input": () => import("@components/manager/widgets/SimpleInput.svelte"),
+        "poisson.simple.switch": () => import("@components/manager/widgets/SimpleSwitch.svelte"),
         "poisson.table": () => import("@components/manager/widgets/Table.svelte"),
         "poisson.timedelta": () => import("@components/manager/widgets/TimeRange.svelte"),
         "poisson.choice.link":  () => import("@components/manager/widgets/LinkChoice.svelte"),
@@ -182,6 +185,10 @@
         flex-direction: column;
         align-items: flex-start;
     }
+
+    .hidden {
+        display: none;
+    }
 </style>
 
 {#if widget === "poisson.context_group"}
@@ -191,20 +198,34 @@
         {#await setting.context_group_init()}
             <Loader/>
         {:then}
-            {#each content as content (`${name}/context_group/${content.name}}`)}
-                <!-- wrap the settings to inject the key via the options parameter -->
-                <svelte:self {...content} 
-                    external_setting={wrap_setting(setting, content.group_key)} 
-                    extra_data={$params.data?.slice(1)}
-                />
+            {#if form}
+                <form>
+                    {#each content as content (`${name}/context_group/${content.name}}`)}
+                        <!-- wrap the settings to inject the key via the options parameter -->
+                        <svelte:self {...content} 
+                            external_setting={wrap_setting(setting, content.group_key)} 
+                            extra_data={$params.data?.slice(1)}
+                        />
+                    {:else}
+                        <p>No settings in this context block</p>
+                    {/each}
+                </form>
             {:else}
-                <p>No settings in this context block</p>
-            {/each}
+                {#each content as content (`${name}/context_group/${content.name}}`)}
+                    <!-- wrap the settings to inject the key via the options parameter -->
+                    <svelte:self {...content} 
+                        external_setting={wrap_setting(setting, content.group_key)} 
+                        extra_data={$params.data?.slice(1)}
+                    />
+                {:else}
+                    <p>No settings in this context block</p>
+                {/each}
+            {/if}
         {/await}
     {/if}
 {:else}
     {#if (condition && current_condition_met) || !condition}
-        <div class="setting" class:extended>
+        <div class="setting" class:extended class:hidden>
             <div class="setting-title">
                 <label for="poisson-settings-element-{name.replaceAll(" ","")}">
                     <h3>{#if derived}→{/if}{name}</h3>

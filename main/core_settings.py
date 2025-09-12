@@ -1,5 +1,6 @@
 import random
 import string
+from typing import Union
 from main.models import CoreSetting, User
 
 def invalidate_theme_cache():
@@ -90,13 +91,19 @@ CORE_SETTINGS = {
         "default": "60",
         "min": 60,
     },
+    "poisson.self_service.password": {
+        "type": "boolean",
+        "default": "false"
+    }
 }
 
 
 def get_core_setting(key, user: User):
-    val = CoreSetting.objects.get(key=key).value
+    val: Union[str, bool, int] = CoreSetting.objects.get(key=key).value
     if CORE_SETTINGS[key]["type"] == "integer":
         val = int(val)
+    elif CORE_SETTINGS[key]["type"] == "boolean":
+        val = (val == "true")
     return val
 
 def set_core_setting_universally(key, value):

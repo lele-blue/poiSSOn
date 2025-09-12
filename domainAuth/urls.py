@@ -16,8 +16,9 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
-from main.views import CheckApplicationPassword, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, LoginLinkView, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, main_view_dev_inlay_helper, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
+from main.views import CheckApplicationPassword, CodeView, ConfigurationByKeys, ConfigurationsAPI, GetServiceConfigurationInfo, LogOut, LoginLinkView, ServiceView, SetApplicationPassword, UserViewSet, ValidatePassword, ViewServiceConfiguration, main_view, main_view_dev_inlay_helper, static_resolver, AjaxLogin, login_check, UserGetOwnServices, GetNextCredential, \
     SetNextCredentialSource, GetServiceInfo, redirect_unauthenticated, ConsumeCode, CheckRedirect, CreateOriginMigrationToken, AuthenticateCrossorigin, CheckPermissionForService, ConfigurationByKey, TwoFactorStatus, TwoFactorVerification, TwoFactorManagement, TotpQrGenerator, ManagerCoreSetting
 from main.oobe import CreateAdminAndFinishOOBE
 from main.oidc_provider_settings import wrap_authorize_post
@@ -29,50 +30,53 @@ from rest_framework.routers import SimpleRouter
 wrap_authorize_post()
 
 router = SimpleRouter(trailing_slash=False)
-router.register(r'auth/api/manager/users', UserViewSet, basename='user')
-router.register(r'auth/api/manager/login_links', LoginLinkView, basename='login_link')
+router.register(f'{settings.BASEPATH_REL}/api/manager/users', UserViewSet, basename='user')
+router.register(f'{settings.BASEPATH_REL}/api/manager/login_links', LoginLinkView, basename='login_link')
+router.register(f'{settings.BASEPATH_REL}/api/manager/services', ServiceView, basename='service')
 
 
 urlpatterns = [
-    path('auth/go/admin', admin.site.urls),
-    path('auth/go/static/resolve/<path:url>', static_resolver),
-    path('auth/go/unauthenticated', redirect_unauthenticated, name="redirect_unauth"),
-    path('auth/api/logon', AjaxLogin.as_view()),
-    path('auth/api/logoff', LogOut.as_view()),
-    path('auth/api/service/<str:name>/configuration', GetServiceConfigurationInfo.as_view()),
-    path('auth/api/services/query', GetServiceInfo.as_view()),
-    path('auth/api/services/redirect_check', CheckRedirect.as_view()),
-    path('auth/api/crossorigin/create_migration_token', CreateOriginMigrationToken.as_view()),
-    path('auth/crossorigin', AuthenticateCrossorigin.as_view()),
-    path('auth/api/consume_code', ConsumeCode.as_view()),
-    path('auth/api/ping', login_check),
-    path('auth/api/alt_ping', login_check),
-    path('auth/api/configuration/<str:service_name>', ConfigurationsAPI.as_view()),
-    path('auth/api/next_credentials/store', SetNextCredentialSource.as_view()),
-    path('auth/api/next_credentials/retrieve', GetNextCredential.as_view()),
-    path('auth/api/services', UserGetOwnServices.as_view()),
-    path('auth/api/services/check', CheckPermissionForService.as_view()),
-    path('auth/api/2fa/status', TwoFactorStatus.as_view()),
-    path('auth/api/2fa/verification', TwoFactorVerification.as_view()),
-    path('auth/api/2fa/manage', TwoFactorManagement.as_view()),
-    path('auth/api/2fa/totp/qrcode', TotpQrGenerator.as_view()),
+    path(f'{settings.BASEPATH_REL}/go/admin/', admin.site.urls),
+    path(f'{settings.BASEPATH_REL}/go/admin', RedirectView.as_view(url="/auth/go/admin/")),
+    path(f'{settings.BASEPATH_REL}/go/static/resolve/<path:url>', static_resolver),
+    path(f'{settings.BASEPATH_REL}/go/unauthenticated', redirect_unauthenticated, name="redirect_unauth"),
+    path(f'{settings.BASEPATH_REL}/api/logon', AjaxLogin.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/logoff', LogOut.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/service/<str:name>/configuration', GetServiceConfigurationInfo.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/services/query', GetServiceInfo.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/services/redirect_check', CheckRedirect.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/crossorigin/create_migration_token', CreateOriginMigrationToken.as_view()),
+    path(f'{settings.BASEPATH_REL}/crossorigin', AuthenticateCrossorigin.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/consume_code', ConsumeCode.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/ping', login_check),
+    path(f'{settings.BASEPATH_REL}/api/alt_ping', login_check),
+    path(f'{settings.BASEPATH_REL}/api/configuration/<str:service_name>', ConfigurationsAPI.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/next_credentials/store', SetNextCredentialSource.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/next_credentials/retrieve', GetNextCredential.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/services', UserGetOwnServices.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/services/check', CheckPermissionForService.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/2fa/status', TwoFactorStatus.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/2fa/verification', TwoFactorVerification.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/2fa/manage', TwoFactorManagement.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/2fa/totp/qrcode', TotpQrGenerator.as_view()),
 
-    path('auth/api/configuration/management/<str:service_name>/by_key/<str:query_id>', ConfigurationByKey.as_view()),
-    path('auth/api/configuration/management/<str:service_name>/by_keys', ConfigurationByKeys.as_view()),
-    path('auth/api/configuration/management/<str:service_name>/check_password/<str:query_id>', ValidatePassword.as_view()),
-    path('auth/api/application_password/management/<str:service_name>/check_password/<str:username>', CheckApplicationPassword.as_view()),
-    path('auth/api/configuration/view/<str:service_name>', ViewServiceConfiguration.as_view()),
-    path('auth/api/application_password/<str:service_name>', SetApplicationPassword.as_view()),
-    path('auth/api/oobe/create_admin_and_finish_oobe', CreateAdminAndFinishOOBE.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/by_key/<str:query_id>', ConfigurationByKey.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/by_keys', ConfigurationByKeys.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/check_password/<str:query_id>', ValidatePassword.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/application_password/management/<str:service_name>/check_password/<str:username>', CheckApplicationPassword.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/configuration/view/<str:service_name>', ViewServiceConfiguration.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/application_password/<str:service_name>', SetApplicationPassword.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/oobe/create_admin_and_finish_oobe', CreateAdminAndFinishOOBE.as_view()),
 
-    path('auth/api/manager/core_setting/<str:setting>', ManagerCoreSetting.as_view()),
+    path(f'{settings.BASEPATH_REL}/api/manager/core_setting/<str:setting>', ManagerCoreSetting.as_view()),
 
     *router.urls,
 
-    path('auth/openid/', include('oidc_provider.urls', namespace='oidc_provider')),
-    path('auth/<path:url>', main_view),
-    path('auth', main_view),
+    path(f'{settings.BASEPATH_REL}/openid/', include('oidc_provider.urls', namespace='oidc_provider')),
+    path(f'{settings.BASEPATH_REL}/go/code', CodeView.as_view()),
+    path(f'{settings.BASEPATH_REL}/<path:url>', main_view),
+    path(f'{settings.BASEPATH_REL}', main_view),
 ]
 
 if settings.DEBUG:
-    urlpatterns.insert(0, path("auth/debug/dev_inlay", main_view_dev_inlay_helper))
+    urlpatterns.insert(0, path(f"{settings.BASEPATH_REL}/debug/dev_inlay", main_view_dev_inlay_helper))

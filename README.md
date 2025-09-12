@@ -1,23 +1,21 @@
 # Very simple and specific SSO
 
-This is an SSO service that is tailored to operate primarily on the nginx `auth_request` directive.
+This is an SSO service with a few features i thought to be useful
 
 ## Key features:
 * Can easily be retrofitted to services that don't support authentication (like static sites), or SSO (i retrofitted FoundryVTT with this)
 * Provides anonymous One time code login for users without an account
-* Provides a OIDC interface for services that support OAuth (may need a bit more work though, very basic atm)
+* Provides a OIDC interface for services that support OAuth
 * Provides a dashboard with a collection of links that is configurable per user
+* Slowly getting an admin interface as well
 
 # Setup
-Something like
-```bash
-cd src
-npm i
-npm run build
-cd ..
+```
 docker compose build
 docker compose up
 ```
+
+You should then be greeted with a setup wizard when visiting the website
 
 Note: The nginx service can also be external, in that case replace the URL `web` below with `localhost`, assuming everything is on one server
 
@@ -52,3 +50,27 @@ auth_request /auth/api/ping;
 then create a service via `/auth/go/admin`, fill in sub_url as your nginx location (WITHOUT origin), and use domain:port as origin (no https://). Choose an icon from https://github.com/Ertego/sso/blob/publish/src/src/components/Icon.svelte#L2
 
 Your may also want to create a UserServiceConnection, which is basically a permission grant for a user (leave username and passwordPlain empty, those are for more advanced retrofitting)
+
+# Docs
+
+Todo :/
+
+# Development
+
+## Setup
+
+```
+pipenv install
+pipenv run python manage.py migrate
+cd src && npm i && npm run dev-build
+```
+
+## Run
+In 3 shells:
+```
+cd src && npm run dev
+docker compose -f ./docker-compose.dev.yml up nginx-dev
+pipenv run python manage.py runserver
+```
+
+Keep in mind that some routes (/auth, /auth/go/code) are wired to the dev-build instead of the hot-reloadable version. If changes are not applied and you see the red warning at the top, re-run dev-build

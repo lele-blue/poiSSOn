@@ -124,6 +124,22 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# disable in prod, since the dropdown allow user enumeration
+if not DEBUG:
+    REST_FRAMEWORK = {
+        'DEFAULT_RENDERER_CLASSES': (
+            'rest_framework.renderers.JSONRenderer',
+        )
+    }
+else:
+    REST_FRAMEWORK = {}
+
+
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    'login_link_redeem': '5/min',
+    'anon': '5/min'
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
@@ -136,11 +152,14 @@ USE_I18N = True
 
 USE_TZ = True
 
+# TODO, not ready yet
+BASEPATH = os.environ.get("POISSON_BASE_PATH", "/auth")
+BASEPATH_REL = BASEPATH[1:]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_URL = 'auth/static/'
+STATIC_URL = f'{BASEPATH_REL}/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -178,7 +197,7 @@ if not DEBUG:
     db_from_env = dj_database_url.config(conn_max_age=500)
     DATABASES['default'].update(db_from_env)
 
-LOGIN_URL = '/auth'
+LOGIN_URL = BASEPATH
 SITE_URL = os.environ.get("SITE_URL")
 
 SITE_NAME = re.match(r"(.+://)?([^\:\/]*).*", SITE_URL).group(2)
@@ -187,6 +206,9 @@ OTP_TOTP_ISSUER = "poiSSOn (" + SITE_NAME + ")"
 OTP_WEBAUTHN_RP_NAME = OTP_TOTP_ISSUER
 OTP_WEBAUTHN_RP_ID = SITE_NAME
 
+APPEND_SLASH = True
+
 OTP_TOTP_IMAGE = f"{SITE_URL}/favicon.ico"
 
 SESSION_COOKIE_NAME = "poisson_session"
+

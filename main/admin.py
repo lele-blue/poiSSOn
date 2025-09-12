@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from rest_framework_api_key.admin import APIKeyModelAdmin
-from .models import ApplicationPassword, ConfigurationApiKey, CoreSetting, ServiceConfiguration, ServiceConfigurationStep, User, Service, UserServiceConnection, Code, Group
+from .models import ApplicationPassword, ConfigurationApiKey, CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, User, Service, UserServiceConnection, Code, Group
 
 
 class TermInlineAdmin(admin.TabularInline):
@@ -26,6 +26,7 @@ admin.site.register(ServiceConfigurationStep)
 admin.site.register(ServiceConfiguration)
 admin.site.register(ApplicationPassword)
 admin.site.register(CoreSetting)
+admin.site.register(LoginLink)
 
 @admin.register(ConfigurationApiKey)
 class OrganizationAPIKeyModelAdmin(APIKeyModelAdmin):

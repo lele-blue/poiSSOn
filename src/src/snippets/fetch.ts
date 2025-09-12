@@ -2,11 +2,13 @@ import {handle_400} from "./handle_2fa_400";
 import {csrftoken} from "./csrf";
 
 export async function do_fetch(url: string, options?: RequestInit, error_handler?: (data: any) => void) {
+		// hack, remove the /auth from the beginning and replace with basepath
+		url = get_basepath() + (url.startsWith("/auth") ? url.substring(5) : url);
     const resp = await fetch(url, options);
 		if (resp.status == 204) return;
     const json = await resp.json();
     if (resp.status >= 400) {
-        const error = handle_400(json, (url, parms) => location.href = `${url}?${new URLSearchParams(parms)}`);
+        const error = handle_400(json, (url, parms) => location.href = `${url}?${new URLSearchParams(parms)}`, error_handler === undefined);
 				if (!error && error_handler) {
 						error_handler(json);
 						return null;
@@ -59,4 +61,8 @@ export async function post<T>(url: string, body: any, error_handler?: (data: any
         method: "POST", 
         ...build_request(body),
     }, error_handler) as T;
+}
+
+export function get_basepath(): string {
+		return window.poisson_base_path;
 }

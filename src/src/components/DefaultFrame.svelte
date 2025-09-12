@@ -1,5 +1,6 @@
 <script>
 import TopBar from "@components/TopBar.svelte"
+import Dialogs from "@components/Dialogs.svelte"
 
 
 export let back = null;
@@ -44,6 +45,7 @@ export let settings = true;
 
 </style>
 
+<Dialogs/>
 <TopBar {back} {settings}/>
 <div class="login_root">
     <div class="login_wrapper">

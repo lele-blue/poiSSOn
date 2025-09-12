@@ -9,6 +9,9 @@
     <h1>Settings</h1>
 
     <Button on:click={() => $goto("/auth/go/settings/2fa")} icon="key">Two Factor Authentication</Button>
+    {#if $currentUser?.permissions.includes("poisson.self_service.password_change")}
+				<Button on:click={() => $goto("/auth/go/settings/password_change")} icon="key">Change Password</Button>
+    {/if}
     {#if $currentUser?.permissions.includes("poisson.manage")}
         <Button on:click={() => $goto("/auth/go/manager")} icon="tune">Configure this PoiSSOn instance</Button>
     {/if}

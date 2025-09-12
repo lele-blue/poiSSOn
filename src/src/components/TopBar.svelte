@@ -6,15 +6,20 @@ import {currentUser} from "../state/currentUser.ts"
 import {fly, slide} from "svelte/transition"
 import {post} from "@/snippets/fetch"
 import {goto} from "@roxi/routify"
+import {get_basepath} from "../snippets/fetch.ts"
 
 
 export let back = null;
 export let settings = true;
 
 async function logout() {
-    await post("/auth/api/logoff", {});
+    await post("/api/logoff", {});
     currentUser.set(null);
-    $goto("/auth", {next: location.href});
+		// dont redirect in this special case
+		if (location.pathname === `${get_basepath()}/go/code` && (new URLSearchParams(location.search)).has("token")) {}
+		else {
+				$goto("/auth", {next: location.href});
+		}
 }
 </script>
 
@@ -43,6 +48,9 @@ async function logout() {
                 <Button dialogButton={true} on:click={() => $goto(back)} icon="chevron-left">Back</Button>
             </div>
         {/if}
+				{#if import.meta.env.VITE_POISSON_DEV}
+						<span style="color: red">DEV-BUILD! No Hot-Reload</span>
+				{/if}
         <Icon icon="account"/>
         <span>Logged in as {$currentUser.username}</span>
         <div style="flex-grow: 1"/>

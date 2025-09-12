@@ -30,6 +30,26 @@
           ]
         },
         {
+          "name": "Self Service",
+          "header_text": "Manage which self service components are available",
+          "slug": "self_service",
+          "permissions": {
+            "permissions": ["poison.self_service.manage"]
+          },
+          "content": [
+            {
+              "name": "Password Change",
+              "type": "poisson.core_setting",
+              "widget": "poisson.simple.switch",
+              "widget_data": {
+              },
+              "type_data": {
+                "poisson.core_setting.key": "poisson.self_service.password"
+              }
+            }
+          ]
+        },
+        {
           "name": "Sessions",
           "header_text": "",
           "slug": "sessions",
@@ -273,6 +293,75 @@
               "name": "${user_title}",
               "header_text": "Edit User",
               "subpages": {
+                "set_password": {
+                  "name": "Set Password for ${user_title}",
+                  "header_text": "",
+                  "content": [
+                    {
+                      "name": null,
+                      "widget": "poisson.context_group",
+                      "form": true,
+                      "type": "poisson.user",
+                      "content": [
+                        {
+                          "group_key": "username",
+                          "name": "Username",
+                          "type": null,
+                          "widget": "poisson.simple.input",
+                          "warn_if": [],
+                          "hidden": true,
+                          "widget_data": {
+                            "input": {
+                              "placeholder": "Username"
+                            }
+                          }
+                        },{
+                          "group_key": "password",
+                          "name": "Password (new)",
+                          "type": null,
+                          "widget": "poisson.simple.input",
+                          "warn_if": [],
+                          "widget_data": {
+                            "input": {
+                              "placeholder": "Password",
+                              "password": true,
+                              "autocomplete": "new-password"
+                            }
+                          }
+                        },
+                        {
+                          "group_key": "password_confirm",
+                          "name": "Password (again)",
+                          "type": null,
+                          "widget": "poisson.simple.input",
+                          "warn_if": [],
+                          "widget_data": {
+                            "input": {
+                              "placeholder": "Password",
+                              "password": true,
+                              "autocomplete": "new-password"
+                            }
+                          }
+                        },
+                        {
+                          "name": "",
+                          "extended": true,
+                          "widget": "poisson.choice.link"  ,
+                          "widget_data": {
+                            "choices": [
+                              {
+                                "icon": "content-save",
+                                "text": "Set password",
+                                "call": "set_password",
+                                "submit": true
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
                 "password_choose": {
                   "name": "Set Password",
                   "header_text":"",
@@ -286,7 +375,8 @@
                         "choices": [
                           {
                             "icon": "pencil",
-                            "text": "Set Password"
+                            "text": "Set Password",
+                            "path_rel": "../set_password"
                           },
                           {
                             "icon": "share",
@@ -323,6 +413,16 @@
                               "section": "users",
                               "data": ["manager", "$val", "password_choose"]
                             }
+                          },
+                          {
+                            "icon": "share",
+                            "text": "Create Login Link",
+                            "call": "create_session_login_link"
+                          },
+                          {
+                            "icon": "shield-key",
+                            "text": "Service Connections",
+                            "call": "open_service_connection_wizard"
                           }
                         ]
                       }
@@ -384,6 +484,15 @@
                       "warn_if": [
                         {"call": "warn_email_direct"}
                       ]
+                    },
+                    {
+                      "group_key": "is_superuser",
+                      "name": "Admin",
+                      "help_text": "This will grant the user ALL management rights. A more fine-grained system is in preparation, but not ready yet",
+                      "condition": {
+                        "call": "is_existing_user"
+                      },
+                      "widget": "poisson.simple.switch"
                     },
                     {
                       "name": " ",

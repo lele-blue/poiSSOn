@@ -1,7 +1,10 @@
 import datetime
 import random
 from secrets import token_urlsafe
+import types
+from urllib.parse import quote
 from uuid import uuid4
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.shortcuts import get_object_or_404
 from oidc_provider.models import Client as OIDCClient
@@ -16,6 +19,9 @@ from string import ascii_letters, ascii_uppercase, digits
 
 def generate_id(prefix):
     return f"{prefix}_" + "".join(random.choices([*list(ascii_letters), *map(str, range(10))], k=24-len(prefix)-1))
+
+def generate_service_id():
+    return generate_id("srvc")
 
 def generate_user_id():
     return generate_id("user")
@@ -51,11 +57,13 @@ class Group(models.Model):
 
 
 class Service(models.Model):
+    uid = models.CharField(max_length=64, unique=True, default=generate_user_id)
     name = models.CharField(max_length=128)
     icon = models.CharField(max_length=32)
     sub_url = models.CharField(max_length=128)
     regex = models.BooleanField(default=False)
     origin = models.CharField(max_length=64, null=True, blank=True)
+    https = models.BooleanField(default=True)
     oidc_client = models.OneToOneField(OIDCClient, on_delete=models.SET_NULL, null=True, blank=True)
     allow_max_configurations = models.PositiveSmallIntegerField(null=True, blank=True, default=0)
     can_have_application_password = models.BooleanField(default=False)
@@ -139,6 +147,10 @@ class OriginMigrationToken(models.Model):
     account = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     parent_session = models.ForeignKey(Session, on_delete=models.CASCADE, null=True)
 
+    def get_url(self):
+        base_url = f"http{'s' if self.service.https else ''}://{self.service.origin}"
+        return f"{base_url}/_sso?token={self.token}&next={quote(base_url + self.service.sub_url or '/')}"
+
 
 class SessionTreeEdge(models.Model):
     parent = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="children")
@@ -185,9 +197,14 @@ def gen_login_link():
     return token_urlsafe(128)[:128]
 
 
+POISSON_LOGIN_LINK_PURPOSE = types.SimpleNamespace()
+POISSON_LOGIN_LINK_PURPOSE.SESSION_LOGIN = "poisson.loginlink.purpose.session_login"
+POISSON_LOGIN_LINK_PURPOSE.SERVICE_LOGIN = "poisson.loginlink.purpose.service_login"
+POISSON_LOGIN_LINK_PURPOSE.PASSWORD_RESET = "poisson.loginlink.purpose.password_reset"
+
 class LoginLink(models.Model):
-    token = models.CharField(max_length=128, default=gen_login_link)
-    purpose = models.CharField(choices=[("poisson.loginlink.purpose.password_reset", "Password Reset"), ("poisson.loginlink.purpose.service_login", "Service Login"), ("poisson.loginlink.purpose.session_login", "Generic Login tied to session")], max_length=48)
+    token = models.CharField(max_length=128, default=gen_login_link, unique=True)
+    purpose = models.CharField(choices=[(POISSON_LOGIN_LINK_PURPOSE.PASSWORD_RESET, "Password Reset"), (POISSON_LOGIN_LINK_PURPOSE.SERVICE_LOGIN, "Service Login"), (POISSON_LOGIN_LINK_PURPOSE.SESSION_LOGIN, "Generic Login tied to session")], max_length=48)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
     parent_session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True, blank=True)
     valid_until = models.DateTimeField()

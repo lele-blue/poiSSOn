@@ -1,9 +1,12 @@
 from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED, UNPROCESSABLE_ENTITY
+from django.utils import timezone
+from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.renderers import JSONRenderer
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 import re
 import base64
 from django.conf import settings
@@ -13,7 +16,7 @@ from django_ratelimit.decorators import ratelimit
 from django_ratelimit.core import is_ratelimited
 from django.utils.timezone import now
 from datetime import timedelta
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.db import transaction, IntegrityError
 from django.utils.decorators import method_decorator
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
@@ -38,10 +41,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.core_settings import CORE_SETTINGS, get_core_setting
-from main.models import ApplicationPassword, CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
-from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, Is2FactorAuthenticated, IsMasterSession, check_user_has_manage_permission
-from main.serializers import CoreSettingValue, FullUserSerializer, LoginLinkSerializer, OTPDeviceSerializer, ServiceConfigurationStepSerializer, SmallLoginLinkSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
-from main.session_tree import check_is_2fa_authenticated_tree_aware, login_master_session, logout_tree_aware
+from main.models import POISSON_LOGIN_LINK_PURPOSE, ApplicationPassword, CoreSetting, LoginLink, ServiceConfiguration, ServiceConfigurationStep, SessionTreeEdge, User, UserServiceConnection, Service, Code, OriginMigrationToken
+from main.permissions import HasCoreSettingPermission, HasServicePermission, HasUserManagePermission, HasUserServiceManagePermission, Is2FactorAuthenticated, IsMasterSession, IsPasswordSelfServiceEnabled, IsSelf, ReadOnly, check_user_has_manage_permission
+from main.serializers import AdminServiceSerializer, CoreSettingValue, FullUserSerializer, LoginLinkSerializer, OTPDeviceSerializer, PasswordChangeSerializer, RedeemLoginLinkDto, ServiceConfigurationStepSerializer, SetUserServiceConnectionsDto, SmallLoginLinkSerializer, SmallUserSerializer, UserConnectionSerializer, PublicServiceSerializer, OriginMigrationTokenSerializer, UserPermissionStateSerializer
+from main.session_tree import check_is_2fa_authenticated_tree_aware, is_master_session, login_master_session, logout_tree_aware
 from otp_webauthn.models import WebauthnDevice
 from main import theming
 from main import oobe
@@ -52,12 +55,14 @@ def main_view(request, url=None):
         "poisson_theme_background_url": theming.get_current_background_url(),
         "poisson_theme_root_css": theming.get_current_root_css(),
         "poisson_instance_name": theming.get_instance_name(),
+        "poisson_base_path": settings.BASEPATH,
     })
 
 def main_view_dev_inlay_helper(request):
     return render(request, "main_inlay_dev.html", {
         "poisson_theme_background_url": theming.get_current_background_url(),
         "poisson_theme_root_css": theming.get_current_root_css(),
+        "poisson_base_path": settings.BASEPATH,
     })
 
 
@@ -237,6 +242,13 @@ class TwoFactorStatus(APIView):
 
 class PoiSSOnAPIException(APIException):
     status_code = 400
+
+
+class ShowFrontentAlertAPIException(APIException):
+    status_code = 400
+
+    def __init__(self, message):
+        self.detail = {"action": "alert", "reason": message}
 
 
 class TwoFactorVerification(APIView):
@@ -482,11 +494,15 @@ class CreateOriginMigrationToken(APIView):
     permission_classes = [IsMasterSession]
 
     @staticmethod
-    def create_token(url, user, session):
+    def create_token(url_or_service: Union[Service, str], user, session):
+        service = None
+        if not isinstance(url_or_service, Service):
+            service = resolve_to_service(url_or_service)
+            if not service:
+                raise Http404()
+        else:
+            service = url_or_service
 
-        service = resolve_to_service(url)
-        if not service:
-            raise Http404()
         token = OriginMigrationToken();
         token.token = token_urlsafe(128)[:128]
         token.service = service
@@ -846,12 +862,12 @@ class LogOut(APIView):
 
 
 class UserPagination(LimitOffsetPagination):
-    default_limit = 25
+    default_limit = 10
     max_limit = 25
 
 
 class UserViewSet(ModelViewSet):
-    permission_classes = [IsMasterSession, HasUserManagePermission, Is2FactorAuthenticated]
+    permission_classes = [IsMasterSession, HasUserManagePermission|(ReadOnly & IsSelf & IsPasswordSelfServiceEnabled), Is2FactorAuthenticated]
     pagination_class = UserPagination
     lookup_field = "uid"
 
@@ -869,6 +885,44 @@ class UserViewSet(ModelViewSet):
             qs = qs.order_by(*order_by)
         return qs
 
+    @action(detail=True, methods=["POST"], permission_classes=[IsMasterSession, HasUserManagePermission, Is2FactorAuthenticated])
+    def set_service_connections(self, request, uid):
+        user = self.get_object()
+        data = SetUserServiceConnectionsDto(data=request.data)
+        data.is_valid(raise_exception=True)
+        services_before = UserServiceConnection.objects.filter(user=self.get_object()).values_list("service__uid", flat=True)
+        for existing_service_uid in services_before:
+            if existing_service_uid not in map(lambda service: service.uid, data.validated_data["services"]):
+                UserServiceConnection.objects.get(user=user, service__uid=existing_service_uid).delete()
+        for now_service in data.validated_data["services"]:
+            if now_service.uid not in services_before:
+                UserServiceConnection.objects.create(user=user, service=now_service)
+
+        return Response({"action": "continue"})
+
+    @action(detail=True, permission_classes=[IsMasterSession, HasUserManagePermission, Is2FactorAuthenticated])
+    def service_connections(self, request, uid):
+        return Response(UserServiceConnection.objects.filter(user=self.get_object()).values_list("service__uid", flat=True))
+
+
+
+    @action(detail=True, methods=["POST"], permission_classes=[IsMasterSession, Is2FactorAuthenticated, HasUserManagePermission | (IsSelf & IsPasswordSelfServiceEnabled)])
+    def set_password(self, request, uid):
+        password_change = PasswordChangeSerializer(self.get_object(), data=request.data)
+        password_change.is_valid(raise_exception=True)
+        password_change.save()
+
+        # required so the user is not logged out
+        if request.user.uid == uid:
+            update_session_auth_hash(request, User.objects.get(uid=uid))
+            request.session.save()
+
+        return Response({"action": "continue"})
+
+    def update(self, request, uid):
+        self.kwargs["method"] = "update"
+        return super().update(request, uid)
+
     def retrieve(self, request, uid):
         self.kwargs["method"] = "retrieve"
         return super().retrieve(request, uid)
@@ -878,9 +932,24 @@ class UserViewSet(ModelViewSet):
             return FullUserSerializer
         return SmallUserSerializer
 
+    def get_serializer_context(self):
+        if self.kwargs.get("method") == "update" and HasUserManagePermission().has_permission(self.request, self):
+            return {"can_set_superuser": True}
+        return {}
+
+
+class ServiceView(ModelViewSet):
+    serializer_class = AdminServiceSerializer
+    permission_classes = (IsMasterSession, HasUserServiceManagePermission & ReadOnly, Is2FactorAuthenticated)
+    queryset = Service.objects.all()
+    lookup_field = "uid"
+
 
 class LoginLinkView(ModelViewSet):
     serializer_class = LoginLinkSerializer
+    lookup_field = "token"
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login_link_redeem"
 
     def get_serializer_class(self):
         return LoginLinkSerializer if self.has_manage_permission() else SmallLoginLinkSerializer
@@ -892,6 +961,8 @@ class LoginLinkView(ModelViewSet):
         return check_user_has_manage_permission(self.request.user, "poisson.manage.user.reset_password")
 
     def get_permissions(self):
+        if self.request.method in SAFE_METHODS or self.is_redeem_action():
+            return []
         result = IsMasterSession
         if self.request.user.is_authenticated:
             if self.request.method not in SAFE_METHODS and "user" in self.request.data and self.request.data["user"] != self.request.user.uid:
@@ -899,11 +970,70 @@ class LoginLinkView(ModelViewSet):
 
         return [result()]
 
+    def is_redeem_action(self):
+        return self.request._request.resolver_match.url_name == "login_link-redeem"
+
+
+    @action(detail=True, methods=["POST"], permission_classes=[], throttle_classes=[AnonRateThrottle], authentication_classes=[])
+    def redeem(self, request, token):
+        if request.user.is_authenticated:
+            raise ShowFrontentAlertAPIException("User is still logged in. Please log out first.")
+        with transaction.atomic():
+            login_link: LoginLink = self.get_object()
+            redeem_data = RedeemLoginLinkDto(login_link, data=request.data)
+            redeem_data.is_valid(raise_exception=True)
+            redeem_data.save()
+            login_master_session(request, login_link.user)
+            login_link.delete()
+            # unclear why the explicit save is needed
+            request.session.save()
+
+        return Response({"action": "continue"})
+
+
     def get_queryset(self):
-        if self.has_manage_permission():
-            return LoginLink.objects.filter(user=self.request.user)
-        return LoginLink.objects.all()
+        qs = LoginLink.objects.filter(valid_until__gt=timezone.now())
+        if not self.has_manage_permission() and self.request.method not in SAFE_METHODS and not self.is_redeem_action():
+            return qs.filter(user=self.request.user)
+        else:
+            print(99)
+        return qs
 
     def list(self, _):
         raise PermissionDenied()
+
+
+class CodeView(View):
+    def get(self, request):
+        if request.user.is_authenticated and is_master_session(request):
+            # prompt the user to log out first
+            return main_view(request)
+        if "token" in request.GET:
+            qs = LoginLink.objects.filter(token=request.GET["token"])
+            if qs.count() == 1:
+                login_link = qs.first()
+                # we did our sanity checking
+                assert login_link is not None
+                if login_link.valid_until < timezone.now():
+                    return main_view(request)
+                new_url = self.consume(request, login_link)
+                if new_url:
+                    return HttpResponseRedirect(new_url)
+        return main_view(request)
+
+    def consume(self, request, login_link):
+        try:
+            match login_link.purpose:
+                case POISSON_LOGIN_LINK_PURPOSE.SESSION_LOGIN:
+                    login_master_session(request, login_link.user)
+                    return f"/{settings.BASEPATH_REL}/go/dash"
+                case POISSON_LOGIN_LINK_PURPOSE.SERVICE_LOGIN:
+                    return CreateOriginMigrationToken.create_token(login_link.service, login_link.user, login_link.parent_session).get_url()
+                case _:
+                    return None
+
+        finally:
+            if login_link.purpose != POISSON_LOGIN_LINK_PURPOSE.PASSWORD_RESET:
+                login_link.delete()
+
 

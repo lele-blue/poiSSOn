@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "vite build",
+    "dev-build": "VITE_POISSON_DEV=1 vite build",
     "preview": "vite preview",
     "dev": "vite"
   },
