@@ -59,7 +59,6 @@ urlpatterns = [
     path(f'{settings.BASEPATH_REL}/api/2fa/verification', TwoFactorVerification.as_view()),
     path(f'{settings.BASEPATH_REL}/api/2fa/manage', TwoFactorManagement.as_view()),
     path(f'{settings.BASEPATH_REL}/api/2fa/totp/qrcode', TotpQrGenerator.as_view()),
-
     path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/by_key/<str:query_id>', ConfigurationByKey.as_view()),
     path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/by_keys', ConfigurationByKeys.as_view()),
     path(f'{settings.BASEPATH_REL}/api/configuration/management/<str:service_name>/check_password/<str:query_id>', ValidatePassword.as_view()),
