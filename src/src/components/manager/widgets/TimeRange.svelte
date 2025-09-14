@@ -38,10 +38,10 @@
     $: load(setting);
 
 		const mult_map = {
-				"Weeks": 60 * 24 * 7,
-				"Days": 60 * 24,
-				"Hours": 60,
-				"Minutes": 1,
+				"Weeks": 60 * 60 * 24 * 7,
+				"Days": 60 * 60 * 24,
+				"Hours": 60 * 60,
+				"Minutes": 60,
 		}
 
     function save() {
