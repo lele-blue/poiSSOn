@@ -3,6 +3,7 @@
 /src/node_modules
 /src/.routify
 /main/static/build
+/src/dist
 
 **/__pycache__/
 

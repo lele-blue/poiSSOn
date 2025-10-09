@@ -73,8 +73,11 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'domainAuth.urls'
 
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
+OIDC_IDTOKEN_PROCESSING_HOOK = 'main.oidc_provider_settings.idtoken_processing'
 OIDC_EXTRA_SCOPE_CLAIMS = 'main.oidc_provider_settings.CustomScopeClaims'
 OIDC_AFTER_USERLOGIN_HOOK = 'main.oidc_provider_settings.check_permissions'
+OIDC_IDTOKEN_SUB_GENERATOR = 'main.oidc_provider_settings.get_idtoken_sub'
+
 
 TEMPLATES = [
     {

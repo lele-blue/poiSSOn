@@ -72,6 +72,8 @@ class Service(models.Model):
     allow_expose_forward_auth_headers = models.TextField(blank=True)
     allow_expose_forward_auth_headers_ips = models.TextField(blank=True)
 
+    quirk_use_numeric_pk_as_sub = models.BooleanField(default=False)
+
     def __str__(self):
         return self.name
 
@@ -171,9 +173,24 @@ class Code(models.Model):
         return True
 
 
+class GroupServiceConnection(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    # TODO Application password on groups
+
+    def __str__(self):
+        return f"{self.user.username} - {self.service.name}"
+
+    class Meta:
+        ordering = ["group"]
+        unique_together = ["group", "service"]
+
+
 class UserServiceConnection(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    # this exists so application passwords on group connections are possible
+    # inherited_through = models.ForeignKey(GroupServiceConnection, on_delete=models.CASCADE, null=True, blank=True)
     username = models.CharField(max_length=128, blank=True)
     passwordPlain = models.CharField(max_length=128, blank=True)
     configuration_allow_max = models.PositiveSmallIntegerField(null=True, blank=True, default=None)

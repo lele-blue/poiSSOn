@@ -1,13 +1,17 @@
 from urllib.parse import quote
+from django.conf import settings
 from django.http import HttpResponseRedirect
+from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 
+from main import theming
 from main.session_tree import check_is_2fa_authenticated_tree_aware
 from .views import ViewServiceConfiguration, check_user_has_service_permission, service_config_get_set_by_values
 from typing import Optional
-from .models import Service
+from .models import Service, User
 from oidc_provider.lib.claims import ScopeClaims
 from oidc_provider.views import AuthorizeView
+import oidc_provider.views as oicd_provider_views
 from oidc_provider import settings as oidc_settings
 
 def userinfo(claims, user):
@@ -18,6 +22,17 @@ def userinfo(claims, user):
     claims['email'] = user.email
 
     return claims
+
+def idtoken_processing(id_token, user, token, request, **kwargs):
+    # this was the default in early poisson versions, so we need to provide backwards compatibility
+    # done here because in idtoken_sub, the service is unknown
+    if token.client.service.quirk_use_numeric_pk_as_sub:
+        id_token["sub"] = str(user.pk)
+    return id_token
+
+
+def get_idtoken_sub(user: User):
+    return user.uid
 
 
 class CustomScopeClaims(ScopeClaims):
@@ -83,10 +98,23 @@ def wrap_authorize_post():
         return
     authorize_post_wrapped = True
 
+    # wrap the render function so the theming context is available
+    def wrapped_render(request, template, context):
+        return render(request, template, {
+            **context,
+            "poisson_theme_background_url": theming.get_current_background_url(),
+            "poisson_theme_root_css": theming.get_current_root_css(),
+            "poisson_instance_name": theming.get_instance_name(),
+            "poisson_base_path": settings.BASEPATH,
+        })
+
+    oicd_provider_views.render = wrapped_render
+
     original = AuthorizeView.post
 
+
+
     def wrapped(self, request):
-        print("wrapped")
         authorize = self.authorize_endpoint_class(request)
         authorize.validate_params()
         hook_resp = oidc_settings.get('OIDC_AFTER_USERLOGIN_HOOK', import_str=True)(
