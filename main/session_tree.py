@@ -73,12 +73,13 @@ def login_master_session(request, user):
     login(request, user)
     request.session["is_master_session"] = True
     lifetime = 0;
+    print(get_core_setting("poisson.core.session_lifetime.mode", user))
     match get_core_setting("poisson.core.session_lifetime.mode", user):
-        case "poisson.session_lifetime.user_agent_close":
+        case "poisson.session_lifetime.mode.user_agent_close":
             lifetime = 0
-        case "poisson.session_lifetime.fixed_after_login":
+        case "poisson.session_lifetime.mode.fixed_after_login":
             lifetime = timedelta(minutes=get_core_setting("poisson.core.session_lifetime.value", user))
-        case "poisson.session_lifetime.inactivity":
+        case "poisson.session_lifetime.mode.inactivity":
             lifetime = get_core_setting("poisson.core.session_lifetime.value", user)
     request.session.set_expiry(lifetime)
 
